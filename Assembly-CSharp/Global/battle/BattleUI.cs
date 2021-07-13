@@ -29,7 +29,7 @@ public class BattleUI : MonoBehaviour
 		this.mapIDs = FF9StateSystem.Battle.mapName.Keys.ToArray<Int32>();
 		this.battleMapString = FF9StateSystem.Battle.battleMapIndex.ToString();
 		this.mapIndex = Array.IndexOf<Int32>(this.mapIDs, FF9StateSystem.Battle.battleMapIndex);
-		this.btlSeq = base.GetComponent<HonoluluBattleMain>().btlSeq;
+		this.btlSeq = btlseq.instance;
 		this.btlScene = base.GetComponent<HonoluluBattleMain>().btlScene;
 		this.seqNo = 0;
 		this.seqList = base.GetComponent<HonoluluBattleMain>().seqList;
@@ -165,7 +165,7 @@ public class BattleUI : MonoBehaviour
 			}
 			FF9StateSystem.Battle.battleMapIndex = num;
 			FF9StateSystem.Battle.patternIndex = 0;
-			SoundLib.StopAllSounds();
+			SoundLib.StopAllSounds(true);
 			SceneDirector.Replace("BattleMapDebug", SceneTransition.FadeOutToBlack_FadeIn, true);
 		}
 		GUILayout.EndHorizontal();
@@ -205,7 +205,7 @@ public class BattleUI : MonoBehaviour
 		}
 		GUILayout.EndHorizontal();
 		GUILayout.BeginHorizontal();
-		GUI.enabled = (btlseq.seq_work_set.SeqWork[0] != null && btlseq.seq_work_set.SeqWork[0].CmdPtr == null);
+		GUI.enabled = (btlseq.instance.seq_work_set.SeqWork[0] != null && btlseq.instance.seq_work_set.SeqWork[0].CmdPtr == null);
 		if (GUILayout.Button(" < "))
 		{
 			this.seqNo--;
@@ -256,17 +256,17 @@ public class BattleUI : MonoBehaviour
 		GUILayout.BeginHorizontal();
 		if (GUILayout.Button("Normal Attack"))
 		{
-			FF9StateSystem.Battle.debugStartType = 2;
+			FF9StateSystem.Battle.debugStartType = battle_start_type_tags.BTL_START_NORMAL_ATTACK;
 			SceneDirector.Replace("BattleMapDebug", SceneTransition.FadeOutToBlack_FadeIn, true);
 		}
 		if (GUILayout.Button("First Attack"))
 		{
-			FF9StateSystem.Battle.debugStartType = 1;
+			FF9StateSystem.Battle.debugStartType = battle_start_type_tags.BTL_START_FIRST_ATTACK;
 			SceneDirector.Replace("BattleMapDebug", SceneTransition.FadeOutToBlack_FadeIn, true);
 		}
 		if (GUILayout.Button("Back Attack"))
 		{
-			FF9StateSystem.Battle.debugStartType = 0;
+			FF9StateSystem.Battle.debugStartType = battle_start_type_tags.BTL_START_BACK_ATTACK;
 			SceneDirector.Replace("BattleMapDebug", SceneTransition.FadeOutToBlack_FadeIn, true);
 		}
 		GUILayout.EndHorizontal();
@@ -659,7 +659,7 @@ public class BattleUI : MonoBehaviour
 
 	private GameObject sphere;
 
-	private btlseq btlSeq;
+	private btlseq.btlseqinstance btlSeq;
 
 	private GameObject goDebugMonRadius;
 

@@ -67,7 +67,7 @@ namespace Memoria.Launcher
                 Int32 screenWidth = Int32.Parse(strArray[0], CultureInfo.InvariantCulture);
                 Int32 screenHeight = Int32.Parse(strArray[1], CultureInfo.InvariantCulture);
 
-                String directoyPath = ".\\" + (GameSettings.IsX64 ? "x64" : "x86");
+                String directoyPath = Path.GetFullPath(".\\" + (GameSettings.IsX64 ? "x64" : "x86"));
 
                 String executablePath = directoyPath + "\\FF9.exe";
                 if (GameSettings.IsDebugMode)
@@ -92,8 +92,8 @@ namespace Memoria.Launcher
 
                     executablePath = unityPath;
 
-                    String ff9DataPath = Path.GetFullPath(directoyPath + "\\FF9_Data");
-                    String unityDataPath = Path.GetFullPath(directoyPath + "\\Unity_Data");
+                    String ff9DataPath = directoyPath + "\\FF9_Data";
+                    String unityDataPath = directoyPath + "\\Unity_Data";
 
                     if (!Directory.Exists(unityDataPath))
                     {
@@ -114,7 +114,7 @@ namespace Memoria.Launcher
                     }
                 }
 
-                String arguments = $"-runbylauncher -single-instance -monitor {activeMonitor.ToString(CultureInfo.InvariantCulture)} -screen-width {screenWidth.ToString(CultureInfo.InvariantCulture)} -screen-height {screenHeight.ToString(CultureInfo.InvariantCulture)} -screen-fullscreen {(GameSettings.Windowed ? "0" : "1")}";
+                String arguments = $"-runbylauncher -single-instance -monitor {activeMonitor.ToString(CultureInfo.InvariantCulture)} -screen-width {screenWidth.ToString(CultureInfo.InvariantCulture)} -screen-height {screenHeight.ToString(CultureInfo.InvariantCulture)} -screen-fullscreen {((GameSettings.WindowMode == Lang.Settings.Window ^ GameSettings.WindowMode == Lang.Settings.BorderlessFullscreen) ? "0" : "1")} {(GameSettings.WindowMode == Lang.Settings.BorderlessFullscreen ? "-popupwindow" : "")}";
                 await Task.Factory.StartNew(
                     () =>
                     {

@@ -247,7 +247,7 @@ public class WorldHUD : UIScene
             }
             if (this.isSelectEnable)
 			{
-				if (this.currentState == WorldHUD.State.HUD && this.enableMapButton)
+				if (!FF9StateSystem.Battle.isEncount && this.currentState == WorldHUD.State.HUD && this.enableMapButton)
 				{
 					this.currentState = WorldHUD.State.FullMap;
 					PersistenSingleton<UIManager>.Instance.SetPlayerControlEnable(false, delegate
@@ -621,9 +621,10 @@ public class WorldHUD : UIScene
 
 	public void InitialHUD()
 	{
+		String[] spriteInfo;
 		if (WMUIData.ActiveMapNo == 1)
 		{
-			Sprite sprite = Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/world_map_full_all");
+			Sprite sprite = AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/world_map_full_all", out spriteInfo, false);
 			this.miniMapSprite.spriteName = "world_map_mini_all";
 			this.miniMapButton.normalSprite = "world_map_mini_all";
 			this.mapSprite.sprite2D = sprite;
@@ -631,7 +632,7 @@ public class WorldHUD : UIScene
 		}
 		else
 		{
-			Sprite sprite2 = Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/world_map_full_mistcontinent");
+			Sprite sprite2 = AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/world_map_full_mistcontinent", out spriteInfo, false);
 			this.miniMapSprite.spriteName = "world_map_mini_mistcontinent";
 			this.miniMapButton.normalSprite = "world_map_mini_mistcontinent";
 			this.mapSprite.sprite2D = sprite2;
@@ -806,6 +807,7 @@ public class WorldHUD : UIScene
 		this.referencePosition += this.pointerOffset;
 		this.pointerPosition = this.mapPointerWidget.transform.localPosition;
 		Int32 num = 0;
+		Vector2 vector = new Vector2(12.5f, -12.5f);
 		for (Int32 i = 0; i < 64; i++)
 		{
 			ff9.navipos navipos = navigationLocaition[activeMapNo, i];
@@ -815,7 +817,7 @@ public class WorldHUD : UIScene
 				{
 					GameObject gameObject = NGUITools.AddChild(this.mapLocationPointerPanel, this.LocationPointerPrefab);
 					gameObject.name = "Location Pointer#" + i;
-					gameObject.transform.localPosition = new Vector3((Single)navipos.vx * UIManager.ResourceXMultipier, (Single)(-(Single)navipos.vy) * UIManager.ResourceYMultipier + a.y, 0f);
+					gameObject.transform.localPosition = new Vector3(vector.x + (float)navipos.vx * UIManager.ResourceXMultipier, vector.y + ((float)(-(float)navipos.vy) * UIManager.ResourceYMultipier + a.y), 0f);
 					if (HonoInputManager.MouseEnabled)
 					{
 						UIEventListener uieventListener = UIEventListener.Get(gameObject);
@@ -830,7 +832,7 @@ public class WorldHUD : UIScene
 					WorldHUD.LocationPostionHudData locationPostionHudData = this.locationPointerList[num];
 					locationPostionHudData.gameobject.name = "Location Pointer#" + i;
 					locationPostionHudData.locationId = i;
-					locationPostionHudData.transform.localPosition = new Vector3((Single)navipos.vx * UIManager.ResourceXMultipier, (Single)(-(Single)navipos.vy) * UIManager.ResourceYMultipier + a.y, 0f);
+					locationPostionHudData.transform.localPosition = new Vector3(vector.x + (float)navipos.vx * UIManager.ResourceXMultipier, vector.y + ((float)(-(float)navipos.vy) * UIManager.ResourceYMultipier + a.y), 0f);
 				}
 				num++;
 			}

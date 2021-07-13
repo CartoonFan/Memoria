@@ -7,7 +7,7 @@ namespace Memoria
     {
         public static Int32 Next8()
         {
-            return Random.Range(0, 256);
+            return Random.Range(0, 256); // UnityEngine.Random.Range(min [inclusive], max [exclusive])
         }
 
         public static Int32 Next16()

@@ -18,6 +18,7 @@ public class PLAYER
 		this.sa = new UInt32[2];
 		this.sa[0] = 0u;
 		this.sa[1] = 0u;
+		this.mpCostFactor = 100;
 	}
 
     public CharacterIndex Index => info.slot_no;
@@ -45,7 +46,6 @@ public class PLAYER
 			this.cur.capa = this.max.capa;
 			this.sa[0] = 0u;
 			this.sa[1] = 0u;
-			ff9play.FF9Play_Update(this);
 		}
 	}
 
@@ -284,4 +284,7 @@ public class PLAYER
 	public Byte[] pa;
 
 	public UInt32[] sa;
+
+	// Custom fields
+	public Int16 mpCostFactor;
 }

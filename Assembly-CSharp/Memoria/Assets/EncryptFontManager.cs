@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Memoria.Prime;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -33,11 +33,15 @@ namespace Memoria.Assets
             String path = "EmbeddedAsset/FA/" + AssetManagerUtil.GetPlatformPrefix(Application.platform) + "_fa.mpc";
             if (fontBundle == null)
             {
-                TextAsset textAsset = Resources.Load<TextAsset>(path);
-                Byte[] binary = ByteEncryption.Decryption(textAsset.bytes);
+				String[] fontInfo;
+                Byte[] binAsset = AssetManager.LoadBytes(path, out fontInfo, false);
+                Byte[] binary = ByteEncryption.Decryption(binAsset);
                 fontBundle = AssetBundle.CreateFromMemoryImmediate(binary);
             }
-            defaultFont = LoadFont(fontBundle.LoadAsset<Font>("TBUDGoStd-Bold"));
+            if (Configuration.Font.Names.Length > 0 && EncryptFontManager.fontBundle.Contains(Configuration.Font.Names[0]))
+                EncryptFontManager.defaultFont = EncryptFontManager.LoadFont(EncryptFontManager.fontBundle.LoadAsset<Font>(Configuration.Font.Names[0]));
+            else
+                EncryptFontManager.defaultFont = EncryptFontManager.LoadFont(EncryptFontManager.fontBundle.LoadAsset<Font>("TBUDGoStd-Bold"));
             fontBundle.Unload(false);
             Object.DestroyImmediate(fontBundle);
             fontBundle = null;
@@ -90,7 +94,9 @@ namespace Memoria.Assets
                 }
 
                 Log.Message("[FontInterceptor] Initialize new font: [Names: {{{0}}}, Size: {1}]", String.Join(", ", Configuration.Font.Names), Configuration.Font.Size);
-                return Font.CreateDynamicFontFromOSFont(Configuration.Font.Names, Configuration.Font.Size);
+                if (Configuration.Font.Names.Length > 0 && Array.Exists(Font.GetOSInstalledFontNames(), font => font.CompareTo(Configuration.Font.Names[0]) == 0))
+                    return Font.CreateDynamicFontFromOSFont(Configuration.Font.Names, Configuration.Font.Size);
+                return null;
             }
             catch (Exception ex)
             {

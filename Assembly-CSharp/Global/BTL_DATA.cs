@@ -1,27 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using FF9;
 using Memoria.Data;
 using UnityEngine;
 
 public class BTL_DATA
 {
-	public BTL_DATA()
-	{
-		this.cmd = new CMD_DATA[6];
-		this.reflec = new REFLEC_DATA();
-		this.max = new POINTS();
-		this.cur = new POINTS();
-		this.elem = new ELEMENT();
-		this.stat = new STAT_INFO();
-		this.bi = new BTL_INFO();
-		this.defence = new ItemDefence();
-		this.def_attr = new DEF_ATTR();
-		this.evt = new PosObj();
-		this.finger_pos = new Int16[2];
-		this.add_col = new Byte[3];
-		this.attachOffset = 0;
-	}
-
 	public void SetDisappear(Byte value)
 	{
 		this.bi.disappear = value;
@@ -120,27 +104,27 @@ public class BTL_DATA
 		}
 	}
 
-	public BTL_DATA next;
+	public BTL_DATA next = null;
 
-	public CMD_DATA[] cmd;
+	public CMD_DATA[] cmd = new CMD_DATA[6];
 
-	public REFLEC_DATA reflec;
+	public REFLEC_DATA reflec = new REFLEC_DATA();
 
-	public POINTS max;
+	public POINTS max = new POINTS();
 
-	public POINTS cur;
+	public POINTS cur = new POINTS();
 
-	public ELEMENT elem;
+	public ELEMENT elem = new ELEMENT();
 
-	public STAT_INFO stat;
+	public STAT_INFO stat = new STAT_INFO();
 
-	public BTL_INFO bi;
+	public BTL_INFO bi = new BTL_INFO();
 
-	public ItemDefence defence;
+	public ItemDefence defence = new ItemDefence();
 
-	public DEF_ATTR def_attr;
+	public DEF_ATTR def_attr = new DEF_ATTR();
 
-	public ItemAttack weapon;
+	public ItemAttack weapon = null;
 
 	public Byte trance;
 
@@ -156,9 +140,9 @@ public class BTL_DATA
 
 	public UInt16 fig_info;
 
-	public Int16 fig;
+	public Int32 fig;
 
-	public Int16 m_fig;
+	public Int32 m_fig;
 
 	public Int16 dms_geo_id;
 
@@ -168,7 +152,7 @@ public class BTL_DATA
 
 	public Vector3 base_pos;
 
-	public PosObj evt;
+	public PosObj evt = new PosObj();
 
 	public String[] mot;
 
@@ -184,7 +168,7 @@ public class BTL_DATA
 
 	public Byte sel_mode;
 
-	public Int16[] finger_pos;
+	public Int16[] finger_pos = new Int16[2];
 
 	public Boolean finger_disp;
 
@@ -194,15 +178,15 @@ public class BTL_DATA
 
 	public Byte shadow_z;
 
-	public Byte[] add_col;
+	public Byte[] add_col = new Byte[3];
 
 	public UInt32[] sa;
 
-	public Int16 fig_regene_hp;
+	public Int32 fig_regene_hp;
 
-	public Int16 fig_poison_hp;
+	public Int32 fig_poison_hp;
 
-	public Int16 fig_poison_mp;
+	public Int32 fig_poison_mp;
 
 	public Byte fig_stat_info;
 
@@ -242,7 +226,7 @@ public class BTL_DATA
 
 	public HUDMessageChild petrifyMessage;
 
-	public Int32 attachOffset;
+	public Int32 attachOffset = 0;
 
 	public GameObject originalGo;
 
@@ -267,4 +251,43 @@ public class BTL_DATA
 	public Int16 targetFrame;
 
 	public Animation animation;
+
+	// Custom fields
+	public Boolean out_of_reach; // Instead of considering the global battle flag "NoNeighboring", we use a flag for each BTL_DATA
+
+	public Boolean[] stat_modifier = new bool[6]; // Str, Mgc, Def, Ev, MgDef, MgEv; Flags checking if a stat has been modified by a spell; re-initialized to "false" when that stat gets modified by script
+
+	public UInt16 summon_count; // Counter of the number of uses of a summon spell in a battle
+
+	public Int16 critical_rate_deal_bonus; // Absolute increase/decrease in the % of critical strikes dealt by the BTL_DATA
+
+	public Int16 critical_rate_receive_bonus; // Absolute increase/decrease in the % of critical strikes dealt to the BTL_DATA
+
+	public Int32 geo_scale_x; // For geo.geoScaleSet
+	public Int32 geo_scale_y;
+	public Int32 geo_scale_z;
+
+	public Boolean is_monster_transform;
+
+	public class MONSTER_TRANSFORM
+	{
+		public BattleCommandId base_command;
+		public BattleCommandId new_command;
+		public UInt32 attack;
+		public Boolean replace_point;
+		public Boolean replace_stat;
+		public Boolean replace_defence;
+		public Boolean replace_element;
+		public Boolean cancel_on_death;
+		public Byte[] cam_bone = new Byte[3];
+		public Byte[] icon_bone = new Byte[6];
+		public SByte[] icon_y = new SByte[6];
+		public SByte[] icon_z = new SByte[6];
+		public BattleStatus resist_added;
+		public UInt16 death_sound;
+		public Int32 fade_counter;
+		public List<BattleCommandId> disable_commands;
+	}
+
+	public MONSTER_TRANSFORM monster_transform;
 }

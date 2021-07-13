@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -108,10 +108,11 @@ public class FieldSPSSystem : HonoBehavior
 
 	private Boolean _loadSPSTexture()
 	{
-		TextAsset textAsset = AssetManager.Load<TextAsset>("FieldMaps/" + this.MapName + "/spt.tcb", false);
-		if (textAsset != (UnityEngine.Object)null)
+		String[] tcbInfo;
+		Byte[] binAsset = AssetManager.LoadBytes("FieldMaps/" + this.MapName + "/spt.tcb", out tcbInfo, false);
+		if (binAsset != null)
 		{
-			using (BinaryReader binaryReader = new BinaryReader(new MemoryStream(textAsset.bytes)))
+			using (BinaryReader binaryReader = new BinaryReader(new MemoryStream(binAsset)))
 			{
 				UInt32 num = binaryReader.ReadUInt32();
 				UInt32 num2 = binaryReader.ReadUInt32();
@@ -162,28 +163,28 @@ public class FieldSPSSystem : HonoBehavior
 		{
 			return true;
 		}
-		TextAsset textAsset = AssetManager.Load<TextAsset>(String.Concat(new Object[]
+		String[] spsInfo;
+		Byte[] binAsset = AssetManager.LoadBytes(String.Concat(new Object[]
 		{
 			"FieldMaps/",
 			this.MapName,
 			"/",
 			spsNo,
 			".sps"
-		}), false);
-		if (textAsset == (UnityEngine.Object)null)
+		}), out spsInfo, false);
+		if (binAsset == null)
 		{
 			return false;
 		}
-		Byte[] bytes = textAsset.bytes;
-		Int32 key = this._GetSpsFrameCount(bytes);
-		this._spsBinDict.Add(spsNo, new KeyValuePair<Int32, Byte[]>(key, bytes));
+		Int32 key = this._GetSpsFrameCount(binAsset);
+		this._spsBinDict.Add(spsNo, new KeyValuePair<Int32, Byte[]>(key, binAsset));
 		return true;
 	}
 
 	public void FF9FieldSPSSetObjParm(Int32 ObjNo, Int32 ParmType, Int32 Arg0, Int32 Arg1, Int32 Arg2)
 	{
 		FieldSPS fieldSPS = this._spsList[ObjNo];
-		if (ParmType == 130)
+		if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_REF)
 		{
 			if (Arg0 != -1)
 			{
@@ -215,18 +216,17 @@ public class FieldSPSSystem : HonoBehavior
 				fieldSPS.boneTran = (Transform)null;
 			}
 		}
-		else if (ParmType == 131)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_ATTR)
 		{
-			if (Arg1 != 0)
+			if (Arg1 == 0)
 			{
-				FieldSPS fieldSPS2 = fieldSPS;
-				fieldSPS2.attr = (Byte)(fieldSPS2.attr | (Byte)Arg0);
+				fieldSPS.attr = (Byte) (fieldSPS.attr & (Byte) (~(Byte) Arg0));
 			}
 			else
 			{
-				FieldSPS fieldSPS3 = fieldSPS;
-				fieldSPS3.attr = (Byte)(fieldSPS3.attr & (Byte)(~(Byte)Arg0));
+				fieldSPS.attr = (Byte) (fieldSPS.attr | (Byte) Arg0);
 			}
+
 			if ((fieldSPS.attr & 1) == 0)
 			{
 				fieldSPS.meshRenderer.enabled = false;
@@ -243,7 +243,7 @@ public class FieldSPSSystem : HonoBehavior
 				fieldSPS.meshRenderer.enabled = true;
 			}
 		}
-		else if (ParmType == 135)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_POS)
 		{
 			if (FF9StateSystem.Common.FF9.fldMapNo == 911 || FF9StateSystem.Common.FF9.fldMapNo == 1911)
 			{
@@ -257,15 +257,15 @@ public class FieldSPSSystem : HonoBehavior
 				fieldSPS.pos = new Vector3((Single)Arg0, (Single)(Arg1 * -1), (Single)Arg2);
 			}
 		}
-		else if (ParmType == 140)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_ROT)
 		{
 			fieldSPS.rot = new Vector3((Single)Arg0 / 4096f * 360f, (Single)Arg1 / 4096f * 360f, (Single)Arg2 / 4096f * 360f);
 		}
-		else if (ParmType == 145)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_SCALE)
 		{
 			fieldSPS.scale = Arg0;
 		}
-		else if (ParmType == 150)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_CHAR)
 		{
 			Obj objUID = PersistenSingleton<EventEngine>.Instance.GetObjUID(Arg0);
 			fieldSPS.charNo = Arg0;
@@ -273,27 +273,27 @@ public class FieldSPSSystem : HonoBehavior
 			fieldSPS.charTran = objUID.go.transform;
 			fieldSPS.boneTran = objUID.go.transform.GetChildByName("bone" + fieldSPS.boneNo.ToString("D3"));
 		}
-		else if (ParmType == 155)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_FADE)
 		{
 			fieldSPS.fade = (Byte)Arg0;
 		}
-		else if (ParmType == 156)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_ARATE)
 		{
 			fieldSPS.arate = (Byte)Arg0;
 		}
-		else if (ParmType == 160)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_FRAMERATE)
 		{
 			fieldSPS.frameRate = Arg0;
 		}
-		else if (ParmType == 161)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_FRAME)
 		{
 			fieldSPS.curFrame = Arg0 << 4;
 		}
-		else if (ParmType == 165)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_POSOFFSET)
 		{
 			fieldSPS.posOffset = new Vector3((Single)Arg0, (Single)(-(Single)Arg1), (Single)Arg2);
 		}
-		else if (ParmType == 170)
+		else if (ParmType == FieldSPSConst.FF9FIELDSPS_PARMTYPE_DEPTHOFFSET)
 		{
 			fieldSPS.depthOffset = Arg0;
 		}

@@ -21,6 +21,7 @@ public partial class BattleHUD : UIScene
             base.Show(action);
             PersistenSingleton<UIManager>.Instance.Booster.SetBoosterState(PersistenSingleton<UIManager>.Instance.UnityScene);
             FF9StateSystem.Settings.SetMasterSkill();
+            this._doubleCastCount = 0;
             AllMenuPanel.SetActive(false);
         }
         else
@@ -59,14 +60,15 @@ public partial class BattleHUD : UIScene
         if (ButtonGroupState.ActiveGroup == CommandGroupButton)
         {
             FF9Sfx.FF9SFX_Play(103);
+            CommandMenu menuType = _currentCommandIndex;
             _currentCommandIndex = (CommandMenu)go.transform.GetSiblingIndex();
-            _currentCommandId = GetCommandFromCommandIndex(_currentCommandIndex, CurrentPlayerIndex);
+            _currentCommandId = GetCommandFromCommandIndex(ref menuType, CurrentPlayerIndex);
             _commandCursorMemorize[CurrentPlayerIndex] = _currentCommandIndex;
             _subMenuType = SubMenuType.Normal;
             if (IsDoubleCast && _doubleCastCount < 2)
                 ++_doubleCastCount;
 
-            switch (_currentCommandIndex)
+            switch (menuType)
             {
                 case CommandMenu.Attack:
                     SetCommandVisibility(false, false);
@@ -157,7 +159,7 @@ public partial class BattleHUD : UIScene
                 _currentSubMenuIndex = go.GetComponent<RecycleListItem>().ItemDataIndex;
                 if (_currentCommandIndex == CommandMenu.Ability1)
                     _ability1CursorMemorize[CurrentPlayerIndex] = _currentSubMenuIndex;
-                else
+                else if (_currentCommandIndex == CommandMenu.Ability2)
                     _ability2CursorMemorize[CurrentPlayerIndex] = _currentSubMenuIndex;
 
                 SetAbilityPanelVisibility(false, false);
@@ -193,10 +195,12 @@ public partial class BattleHUD : UIScene
         {
             if (ButtonGroupState.ActiveGroup == TargetGroupButton)
             {
+                CommandMenu menuType = _currentCommandIndex;
+                GetCommandFromCommandIndex(ref menuType, CurrentPlayerIndex);
                 FF9Sfx.FF9SFX_Play(101);
                 SetTargetVisibility(false);
                 ClearModelPointer();
-                switch (_currentCommandIndex)
+                switch (menuType)
                 {
                     case CommandMenu.Attack:
                         SetCommandVisibility(true, true);

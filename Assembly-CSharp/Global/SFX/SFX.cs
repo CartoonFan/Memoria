@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -955,6 +955,8 @@ public class SFX
                     SFX.isUpdated = true;
                     Int32 num = SFX.currentEffectID;
                     PSXTextureMgr.isCaptureBlur = num != 274;
+                    if (SFX.preventStepInOut >= 0 && SFX.frameIndex - SFX.preventStepInOut > 2)
+                        SFX.preventStepInOut = -1;
                     if (SFX.currentEffectID == 381)
                     {
                         if (SFX.frameIndex == 1004)
@@ -965,6 +967,16 @@ public class SFX
                         {
                             SFX.subOrder = 0;
                         }
+                    }
+                    if (SFX.currentEffectID == 301)
+                    {
+                        // Fix the effect of Antlion's death: it sunk in the sand, in the PSX version
+                        BTL_DATA btl;
+                        for (btl = FF9StateSystem.Battle.FF9Battle.btl_list.next; btl != null; btl = btl.next)
+                            if (btl.btl_id == SFX.request.trg0.btl_id)
+                                break;
+                        if (btl != null && btl.bi.stop_anim != 0)
+                            btl.pos.y -= 20;
                     }
                 }
                 vib.VIB_service();
@@ -1216,7 +1228,7 @@ public class SFX
             case 121:
                 return battle.btl_bonus.member_flag;
             case 122:
-                return FF9StateSystem.Battle.FF9Battle.btl_scene.Info.StartType;
+                return (Byte)FF9StateSystem.Battle.FF9Battle.btl_scene.Info.StartType;
             case 123:
                 {
                     Int32 num10 = 0;
@@ -1299,6 +1311,11 @@ public class SFX
                 }
                 break;
             case 2:
+                if (SFX.preventStepInOut >= 0 && next.btl_id == SFX.request.exe.btl_id)
+                {
+                    SFX.preventStepInOut = SFX.frameIndex;
+                    break;
+                }
                 next.pos.x = *(Int16*)p;
                 next.pos.y = -(*(Int16*)((Byte*)p + 2) + (Single)next.attachOffset);
                 next.pos.z = *(Int16*)((Byte*)p + 4);
@@ -1353,8 +1370,7 @@ public class SFX
                 }
                 else
                 {
-                    BTL_DATA expr_93F = next;
-                    expr_93F.flags |= FF9.geo.GEO_FLAGS_SCALE;
+                    next.flags |= FF9.geo.GEO_FLAGS_SCALE;
                 }
                 if ((arg0 & 1) == 1)
                 {
@@ -1391,11 +1407,41 @@ public class SFX
                 {
                     arg0 = next.bi.def_idle;
                 }
-                FF9.btl_mot.setMotion(next, (Byte)arg0);
-                next.evt.animFrame = 0;
+                if (arg0 < 6 || next.bi.player != 0)
+                {
+                    // Use Freya's special casting animations instead of her CHANT/MAGIC animations (jump)
+                    if (SFX.currentEffectID != 393 && (arg0 == (Byte)BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_TO_CHANT || arg0 == (Byte)BattlePlayerCharacter.PlayerMotionIndex.MP_CHANT || arg0 == (Byte)BattlePlayerCharacter.PlayerMotionIndex.MP_MAGIC))
+                    {
+                        String goName = next.gameObject.name;
+                        goName.Trim();
+                        if (goName.CompareTo("192(Clone)") == 0 || goName.CompareTo("585(Clone)") == 0)
+                        {
+                            if (arg0 == (Byte)BattlePlayerCharacter.PlayerMotionIndex.MP_CHANT)
+                                FF9.btl_mot.setMotion(next, "ANH_MAIN_B0_011_201");
+                            else if (arg0 == (Byte)BattlePlayerCharacter.PlayerMotionIndex.MP_MAGIC)
+                                FF9.btl_mot.setMotion(next, "ANH_MAIN_B0_011_202");
+                            break;
+                        }
+                    }
+                    if ((arg0 == 29 || arg0 == 30) && next.is_monster_transform && next.btl_id == SFX.request.exe.btl_id)
+                    {
+                        SFX.preventStepInOut = SFX.frameIndex;
+                        break;
+                    }
+                    FF9.btl_mot.setMotion(next, (Byte)arg0);
+                    next.evt.animFrame = 0;
+                }
                 break;
             case 13:
                 {
+                    // Handle Ultima (Pandemonium / Crystal World) such that it doesn't freeze the characters
+                    // In order to use the SFX Ultima as normal spells, this fix is required
+                    //  + adding two effect points (damage point & figure point) in the efXXX file
+                    //  + reset the BBG transparency at the end ("Set battle scene transparency 255 5" in Hades Workshop)
+                    //  + make sure that all the characters are shown at the end (removing all the lines "Show/hide characters" in Hades Workshop has a good-looking result)
+                    // Also, the caster moves away when using SFX 384 (Ultima in Crystal World), so either reset the caster's position at the end of the sequencing or use the Pandemonium version
+                    if ((SFX.currentEffectID == 492 || SFX.currentEffectID == 384) && FF9StateSystem.Battle.FF9Battle.btl_phase == 4)
+                        return next.bi.stop_anim;
                     Byte stop_anim = next.bi.stop_anim;
                     next.bi.stop_anim = (Byte)arg0;
                     return stop_anim;
@@ -1455,6 +1501,8 @@ public class SFX
                 if (SFX.currentEffectID == 301)
                 {
                     next.bi.stop_anim = 1;
+                    foreach (Material material in battlebg.GetShaders(2))
+                        material.SetInt("_ZWrite", 1); // Turn the ground into an opaque material
                 }
                 else
                 {
@@ -1602,57 +1650,42 @@ public class SFX
                 break;
             case 33:
                 {
+                    // Freya's Dragon casting animation (looping or launch)
                     Int32 num9 = arg1;
-                    if (num9 != 490)
+                    switch (num9)
                     {
-                        if (num9 != 491)
-                        {
-                            if (num9 != 61)
-                            {
-                                if (num9 != 83)
-                                {
-                                    if (num9 != 168)
-                                    {
-                                        if (num9 != 296)
-                                        {
-                                            if (num9 != 387)
-                                            {
-                                                Debug.LogError("No match special effect motion");
-                                                return 0;
-                                            }
-                                            arg0 = ((arg0 != 18) ? 1 : 0);
-                                        }
-                                        else
-                                        {
-                                            arg0 = ((arg0 != 19) ? 1 : 0);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        arg0 = ((arg0 != 11) ? 1 : 0);
-                                    }
-                                }
-                                else
-                                {
-                                    arg0 = ((arg0 != 9) ? 1 : 0);
-                                }
-                            }
-                            else
-                            {
-                                arg0 = ((arg0 != 20) ? 1 : 0);
-                            }
-                        }
-                        else
-                        {
+                        case 61: // Luna
+                            arg0 = ((arg0 != 20) ? 1 : 0);
+                            break;
+                        case 83: // White Draw
+                            arg0 = ((arg0 != 9) ? 1 : 0);
+                            break;
+                        case 168: // Reis' Wind
+                            arg0 = ((arg0 != 11) ? 1 : 0);
+                            break;
+                        case 296: // Dragon Breath
+                            arg0 = ((arg0 != 19) ? 1 : 0);
+                            break;
+                        case 387: // Cherry Blossom
                             arg0 = ((arg0 != 18) ? 1 : 0);
-                        }
+                            break;
+                        case 490: // Dragon's Crest
+                            arg0 = ((arg0 != 14) ? 1 : 0);
+                            break;
+                        case 491: // Six Dragons
+                            arg0 = ((arg0 != 18) ? 1 : 0);
+                            break;
+                            /* The sequence code 0x64 ("Play Freya's casting anim" in Hades Workshop) that generates this callback code is not used in other SFX natively but why not...
+                            default:
+                                Debug.LogError("No match special effect motion");
+                                return 0;*/
                     }
+                    String goName = next.gameObject.name;
+                    goName.Trim();
+                    if (goName.CompareTo("192(Clone)") == 0 || goName.CompareTo("585(Clone)") == 0) // GEO_MAIN_B0_011's and GEO_MAIN_B0_033's internal names (Freya/Trance Freya)
+                        FF9.btl_mot.setMotion(next, arg0 != 0 ? "ANH_MAIN_B0_011_202" : "ANH_MAIN_B0_011_201");
                     else
-                    {
-                        arg0 = ((arg0 != 14) ? 1 : 0);
-                    }
-                    String name = arg0 != 0 ? "ANH_MAIN_B0_011_202" : "ANH_MAIN_B0_011_201";
-                    FF9.btl_mot.setMotion(next, name);
+                        FF9.btl_mot.setMotion(next, arg0 != 0 ? BattlePlayerCharacter.PlayerMotionIndex.MP_MAGIC : BattlePlayerCharacter.PlayerMotionIndex.MP_CHANT);
                     next.evt.animFrame = 0;
                     break;
                 }
@@ -1961,8 +1994,8 @@ public class SFX
         {
             projOffset = 100;
         }
-        GCHandle gCHandle = GCHandle.Alloc(btlseq.data, GCHandleType.Pinned);
-        SFX.SFX_StartPlungeCamera(gCHandle.AddrOfPinnedObject(), btlseq.data.Length, btlseq.camOffset, projOffset);
+        GCHandle gCHandle = GCHandle.Alloc(btlseq.instance.data, GCHandleType.Pinned);
+        SFX.SFX_StartPlungeCamera(gCHandle.AddrOfPinnedObject(), btlseq.instance.data.Length, btlseq.instance.camOffset, projOffset);
         gCHandle.Free();
     }
 
@@ -2059,9 +2092,18 @@ public class SFX
             init.weapon_category = (Byte)(SFX.isDebugMode ? 0 : btl.weapon.Category);
             init.weapon_offset0 = (Int16)(SFX.isDebugMode ? 0 : btl.weapon.Offset1);
             init.weapon_offset1 = (Int16)(SFX.isDebugMode ? 0 : btl.weapon.Offset2);
-            init.enemy_cam_bone0 = 0;
-            init.enemy_cam_bone1 = 0;
-            init.enemy_cam_bone2 = 0;
+            if (btl.is_monster_transform)
+            {
+                init.enemy_cam_bone0 = btl.monster_transform.cam_bone[0];
+                init.enemy_cam_bone1 = btl.monster_transform.cam_bone[1];
+                init.enemy_cam_bone2 = btl.monster_transform.cam_bone[2];
+            }
+            else
+            {
+                init.enemy_cam_bone0 = 0;
+                init.enemy_cam_bone1 = 0;
+                init.enemy_cam_bone2 = 0;
+            }
         }
         else
         {
@@ -2073,9 +2115,9 @@ public class SFX
             init.weapon_offset1 = 0;
             if (!SFX.isDebugMode)
             {
-                Byte typeNo = btlseq.btl_list[4].typeNo;
+                Byte typeNo = btlseq.instance.btl_list[4].typeNo;
                 init.enemy_radius = FF9StateSystem.Battle.FF9Battle.btl_scene.MonAddr[typeNo].Radius;
-                init.geo_radius = btlseq.btl_list[4].radius;
+                init.geo_radius = btlseq.instance.btl_list[4].radius;
                 init.geo_height = init.enemy_radius * 2;
                 ENEMY enemyPtr = FF9.btl_util.getEnemyPtr(btl);
                 init.enemy_cam_bone0 = enemyPtr.et.cam_bone[0];
@@ -2244,12 +2286,12 @@ public class SFX
             PSXTextureMgr.SpEff435();
         }
         String path = "SpecialEffects/ef" + effNum.ToString("D3");
-        TextAsset textAsset = Resources.Load<TextAsset>(path);
-        if (textAsset != null)
+		String[] efInfo;
+        Byte[] binAsset = AssetManager.LoadBytes(path, out efInfo, false);
+        if (binAsset != null)
         {
-            textAsset.name = "effect";
-            GCHandle gCHandle2 = GCHandle.Alloc(textAsset.bytes, GCHandleType.Pinned);
-            SFX.SFX_Play(effNum, gCHandle2.AddrOfPinnedObject(), textAsset.bytes.Length, gCHandle.AddrOfPinnedObject());
+            GCHandle gCHandle2 = GCHandle.Alloc(binAsset, GCHandleType.Pinned);
+            SFX.SFX_Play(effNum, gCHandle2.AddrOfPinnedObject(), binAsset.Length, gCHandle.AddrOfPinnedObject());
             gCHandle2.Free();
         }
         else
@@ -2565,8 +2607,16 @@ public class SFX
     public static void SoundPlayChant(Int32 dno, Int32 attr, Int32 position)
     {
         Int32 num = (dno & 16777215) * 3 + SFX.seChantIndex;
+        if ((dno & 16777215) == 3)
+        {
+            if (SFX.seChantIndex % 3 == 0)
+                SoundLib.PlaySoundEffect(REFLECT_SOUND_ID, 5f, 0f, 1f); // DEBUG: using 5f as sound volume because the current sound fix has a low volume... must fix that
+        }
+        else
+        {
+            SoundLib.PlaySfxSound(num, 1f, 0f, 1f);
+        }
         SFX.seChantIndex++;
-        SoundLib.PlaySfxSound(num, 1f, 0f, 1f);
         for (Int32 i = 0; i < SFX.MAX_INDEX; i++)
         {
             if (SFX.channel[i, 0] == -1)
@@ -2812,6 +2862,8 @@ public class SFX
 
     public const Int32 SEND_FLOAT_CAMERA_TARGET = 1;
 
+    public const Int32 REFLECT_SOUND_ID = 350; // Thanks to LovelsDarkness and DoomOyster
+
     public static Int32 currentEffectID;
 
     public static Boolean isDebugAutoPlay;
@@ -2936,4 +2988,6 @@ public class SFX
     }
 
     public unsafe delegate Int32 Callback(Int32 code, Int32 arg0, Int32 arg1, Int32 arg2, Int32 arg3, void* p);
+
+    public static Int32 preventStepInOut = -1;
 }

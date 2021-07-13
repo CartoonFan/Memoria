@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Assets.Sources.Scripts.EventEngine.Utils;
 using Assets.Sources.Scripts.UI.Common;
 using FF9;
@@ -43,6 +43,17 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
     public ObjList gStopObj;
     public ObjTable[] sObjTable;
     public Int32 sSourceObjN;
+    #region Memoria Background free-view mode
+    public Boolean sExternalFieldMode = false;
+    public List<Int16> sExternalFieldList = new List<Int16>();
+    public Int32 sExternalFieldNum;
+    public Int16 sExternalFieldFade;
+    public Int32 sExternalFieldChangeCamera;
+    public Int32 sExternalFieldChangeField;
+    public List<GameObject> sOriginalFieldGameObjects = new List<GameObject>();
+    public String sOriginalFieldName;
+    #endregion
+    public Int16 sOriginalFieldNo;
     public Int32 gMode;
     public Obj gCur;
     public Int32 gArgFlag;
@@ -81,15 +92,15 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
     private PosObj _eyeObj;
     private PosObj _aimObj;
     private FF9FIELD_DISC _ff9fieldDisc;
-    private TextAsset _currentEBAsset;
+    private Byte[] _currentEBAsset;
     private Boolean _posUsed;
     private Boolean _noEvents;
     private FF9StateGlobal _ff9;
     private FF9StateSystem _ff9Sys;
     private GeoTexAnim _geoTexAnim; // DoEventCode
-    private readonly Dictionary<Int32, Int32> _mesIdES_FR; // DoEventCode
-    private readonly Dictionary<Int32, Int32> _mesIdGR;    // DoEventCode
-    private readonly Dictionary<Int32, Int32> _mesIdIT;    // DoEventCode
+    private readonly Dictionary<Int32, Int32> _mesIdES_FR; // DoEventCode; for field 1060 (Cleyra/Cathedral) only
+    private readonly Dictionary<Int32, Int32> _mesIdGR;    // DoEventCode; for field 1060 (Cleyra/Cathedral) only
+    private readonly Dictionary<Int32, Int32> _mesIdIT;    // DoEventCode; for field 1060 (Cleyra/Cathedral) only
     private PosObj _fixThornPosObj; // DoEventCode
     private Int32 _fixThornPosA;      // DoEventCode
     private Int32 _fixThornPosB;      // DoEventCode
@@ -127,6 +138,8 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
 
     public ObjList GetFreeObjList()
     {
+        if (this._context.freeObj == null)
+            return this._context.AddObjList();
         return this._context.freeObj;
     }
 
@@ -488,8 +501,9 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
 
     public void StartEventsByEBFileName(String ebFileName)
     {
-        this._currentEBAsset = AssetManager.Load<TextAsset>(ebFileName, false);
-        this.StartEvents(this._currentEBAsset.bytes);
+		String[] ebInfo;
+        this._currentEBAsset = AssetManager.LoadBytes(ebFileName, out ebInfo, false);
+        this.StartEvents(this._currentEBAsset);
     }
 
     public Boolean IsEventContextValid()
@@ -665,18 +679,24 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
             if (partyMember >= 0)
             {
                 // https://github.com/Albeoris/Memoria/issues/3
-                // Tirlititi: If Beatrix is in the team, we make it so the engine thinks it's another member instead
-                if (partyMember == 8)
+                // Tirlititi: If Beatrix is in the team and she has no script, we make it so the engine thinks it's another member instead
+                if (partyMember == 8) // The index-th team character is Beatrix
                 {
-                    if (!partychk(1))
-                        partyMember = 1;
-                    else if (!partychk(2))
-                        partyMember = 2;
-                    else if (!partychk(3))
-                        partyMember = 3;
-                    else
-                        partyMember = 0;
+                    Byte BeatrixSID = (Byte)((UInt32)(this.sSourceObjN - 9) + numArray1[partyMember]);
+                    if (this.GetIP(BeatrixSID, 0, this.allObjsEBData[BeatrixSID]) == this.nil) // The Main function of the Beatrix entry doesn't exist
+                    {
+                        if (!partychk(1))
+                            partyMember = 1;
+                        else if (!partychk(2))
+                            partyMember = 2;
+                        else if (!partychk(3))
+                            partyMember = 3;
+                        else
+                            partyMember = 0;
+                    }
                 }
+                // Note that, as for all the 9 characters, the Beatrix entry is not dependant on the model used by the entry but rather on the fact that it is at the end of the entry list
+                // (Even in battle scripts, in which character entries are never used nor tied to the team's battle datas, 9 entry slots are reserved at the end of the entry list)
                 // *********************
 
                 num |= 1 << numArray2[partyMember];
@@ -802,6 +822,12 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
             case 4:
                 this._sysList[4] = btl_scrp.GetBattleID(2U);
                 break;
+            case 6:
+                // Usage in battle scripts:
+                // set SV_5 = Spell stat ID of the currently used spell to access (see btl_scrp.GetCurrentCommandData for the list)
+                // set spellstat = SV_6
+                this._sysList[6] = btl_scrp.GetCurrentCommandData(this._sysList[5]);
+                break;
         }
         return this._sysList[num];
     }
@@ -819,6 +845,11 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
     public void SetSysList(Int32 num, Int32 value)
     {
         this._sysList[num & 7] = (UInt16)value;
+        // Usage in battle scripts:
+        // set SV_5 = Spell stat ID of the currently used spell to modify (see btl_scrp.GetCurrentCommandData for the list)
+        // set SV_6 = newvalue
+        if (num == 6)
+            btl_scrp.SetCurrentCommandData(this._sysList[5], value);
     }
 
     private void InitMP()
@@ -828,7 +859,7 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
     private void InitObj()
     {
         Int32 index;
-        for (index = 0; index < 31; ++index)
+        for (index = 0; index < this._context.objlist.Count - 1; ++index)
         {
             ObjList objList = this._context.objlist[index];
             objList.next = this._context.objlist[index + 1];
@@ -876,7 +907,7 @@ public partial class EventEngine : PersistenSingleton<EventEngine>
         if (btl == null)
             return;
 
-        btl_scrp.SetCharacterData(btl.Data, (UInt32)kind, (UInt32)value);
+        btl_scrp.SetCharacterData(btl.Data, (UInt32)kind, (Int32)value);
     }
 
     private Int32 getNumOfObjsInObjList(ObjList list)

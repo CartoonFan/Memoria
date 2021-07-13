@@ -1,7 +1,11 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using FF9;
+using Assets.Sources.Scripts.UI.Common;
 using Memoria.Data;
+using Memoria.Database;
+using Memoria.Assets;
 using UnityEngine;
 using Object = System.Object;
 
@@ -10,20 +14,25 @@ namespace Memoria
     public class BattleUnit
     {
         public CalcFlag Flags;
-        public Int16 HpDamage;
-        public Int16 MpDamage;
+        public Int32 HpDamage;
+        public Int32 MpDamage;
 
         internal BTL_DATA Data;
-        
+
         internal BattleUnit(BTL_DATA data)
         {
             Data = data;
         }
-        
+
         public UInt16 Id => Data.btl_id;
         public Boolean IsPlayer => Data.bi.player != 0;
         public Boolean IsSelected => Data.bi.target != 0;
         public Boolean IsSlave => Data.bi.slave != 0;
+        public Boolean IsOutOfReach
+        {
+            get => Data.out_of_reach;
+            set => Data.out_of_reach = value;
+        }
         public Boolean CanMove => Data.bi.atb != 0;
         public CharacterIndex PlayerIndex => Data.bi.slot_no;
 
@@ -43,15 +52,23 @@ namespace Memoria
             set => Data.bi.dodge = (Byte)(value ? 1 : 0);
         }
 
-        public UInt16 MaximumHp => Data.max.hp;
-        public UInt16 CurrentHp
+        public UInt32 MaximumHp
         {
-            get => Data.cur.hp;
-            set => Data.cur.hp = value;
+            get => btl_para.GetLogicalHP(Data, true);
+            set => btl_para.SetLogicalHP(Data, value, true);
+        }
+        public UInt32 CurrentHp
+        {
+            get => btl_para.GetLogicalHP(Data, false);
+            set => btl_para.SetLogicalHP(Data, value, false);
         }
 
-        public Int16 MaximumMp => Data.max.mp;
-        public Int16 CurrentMp
+        public UInt32 MaximumMp
+        {
+            get => Data.max.mp;
+            set => Data.max.mp = value;
+        }
+        public UInt32 CurrentMp
         {
             get => Data.cur.mp;
             set => Data.cur.mp = value;
@@ -76,7 +93,11 @@ namespace Memoria
             set => Data.defence.PhisicalDefence = value;
         }
 
-        public Byte PhisicalEvade => Data.defence.PhisicalEvade;
+        public Byte PhisicalEvade
+        {
+            get => Data.defence.PhisicalEvade;
+            set => Data.defence.PhisicalEvade = value;
+        }
 
         public Byte Magic
         {
@@ -90,32 +111,48 @@ namespace Memoria
             set => Data.defence.MagicalDefence = value;
         }
 
-        public Byte MagicEvade => Data.defence.MagicalEvade;
+        public Byte MagicEvade
+        {
+            get => Data.defence.MagicalEvade;
+            set => Data.defence.MagicalEvade = value;
+        }
 
-        public Byte Dexterity => Data.elem.dex;
-        public Byte Will => Data.elem.wpr;
+        public Byte Dexterity
+        {
+            get => Data.elem.dex;
+            set => Data.elem.dex = value;
+        }
+        public Byte Will
+        {
+            get => Data.elem.wpr;
+            set => Data.elem.wpr = value;
+        }
 
         public Boolean HasTrance => Data.bi.t_gauge != 0;
-        public Boolean InTrance => Trance == Byte.MaxValue;
+        public Boolean InTrance => (CurrentStatus & BattleStatus.Trance) != 0;
         public Byte Trance
         {
             get => Data.trance;
             set => Data.trance = value;
         }
 
-        public Int16 Fig
+        public Int32 Fig
         {
             get => Data.fig;
             set => Data.fig = value;
         }
 
-        public Byte WeaponRate => Data.weapon.Ref.Rate;
-        public Byte WeaponPower => Data.weapon.Ref.Power;
-        public EffectElement WeaponElement => (EffectElement)Data.weapon.Ref.Elements;
-        public BattleStatus WeaponStatus => FF9StateSystem.Battle.FF9Battle.add_status[Data.weapon.StatusIndex].Value;
+        public Byte WeaponRate => Data.weapon != null ? Data.weapon.Ref.Rate : (Byte)0;
+        public Byte WeaponPower => Data.weapon == null ? (Byte)0
+            : Configuration.Battle.CustomBattleFlagsMeaning == 1 && FF9StateSystem.Battle.FF9Battle.btl_scene.Info.ReverseAttack != 0 && btl_util.getCurCmdPtr() != null && (btl_util.getCurCmdPtr().AbilityType & 0x8) != 0 ? (Byte)Math.Max(1, 60 - Data.weapon.Ref.Power)
+            : Data.weapon.Ref.Power;
+        public EffectElement WeaponElement => (EffectElement)(Data.weapon != null ? Data.weapon.Ref.Elements : 0);
+        public BattleStatus WeaponStatus => Data.weapon != null ? FF9StateSystem.Battle.FF9Battle.add_status[Data.weapon.StatusIndex].Value : 0;
 
         public Character Player => Character.Find(this);
         public CharacterCategory PlayerCategory => Player.Category;
+        public EnemyCategory Category => IsPlayer ? EnemyCategory.Humanoid : (EnemyCategory)btl_util.getEnemyTypePtr(Data).category;
+        public WeaponCategory WeapCategory => (WeaponCategory)(Data.weapon != null ? Data.weapon.Category : 0);
         public BattleEnemy Enemy => new BattleEnemy(btl_util.getEnemyPtr(Data));
         public ENEMY_TYPE EnemyType => btl_util.getEnemyTypePtr(Data);
         public String Name => IsPlayer ? Player.Name : Enemy.Name;
@@ -131,31 +168,124 @@ namespace Memoria
             get => Data.stat.permanent;
             set => Data.stat.permanent = value;
         }
-         
+
         public BattleStatus ResistStatus
         {
             get => Data.stat.invalid;
             set => Data.stat.invalid = value;
         }
 
-        public EffectElement BonusElement => (EffectElement)Data.p_up_attr;
-
-        public EffectElement WeakElement => (EffectElement)Data.def_attr.weak;
-        public EffectElement GuardElement => (EffectElement)Data.def_attr.invalid;
-        public EffectElement AbsorbElement => (EffectElement)Data.def_attr.absorb;
-        public EffectElement HalfElement => (EffectElement)Data.def_attr.half;
+        public EffectElement BonusElement
+        {
+            get => (EffectElement)Data.p_up_attr;
+            set => Data.p_up_attr = (Byte)value;
+        }
+        public EffectElement WeakElement
+        {
+            get => (EffectElement)Data.def_attr.weak;
+            set => Data.def_attr.weak = (Byte)value;
+        }
+        public EffectElement GuardElement
+        {
+            get => (EffectElement)Data.def_attr.invalid;
+            set => Data.def_attr.invalid = (Byte)value;
+        }
+        public EffectElement AbsorbElement
+        {
+            get => (EffectElement)Data.def_attr.absorb;
+            set => Data.def_attr.absorb = (Byte)value;
+        }
+        public EffectElement HalfElement
+        {
+            get => (EffectElement)Data.def_attr.half;
+            set => Data.def_attr.half = (Byte)value;
+        }
 
         public Boolean IsLevitate => HasCategory(EnemyCategory.Flight) || IsUnderAnyStatus(BattleStatus.Float);
         public Boolean IsZombie => HasCategory(EnemyCategory.Undead) || IsUnderAnyStatus(BattleStatus.Zombie);
-        public Boolean HasLongReach => HasSupportAbility(SupportAbility1.LongReach) || HasCategory(WeaponCategory.LongRange);
+        public Boolean HasLongRangeWeapon => HasCategory(WeaponCategory.LongRange);
 
-        public WeaponItem Weapon => (WeaponItem)btl_util.getWeaponNumber(Data);
-        public Boolean IsHealer => IsPlayer && (HasSupportAbility(SupportAbility1.Healer) || Weapon == WeaponItem.HealingRod);
-        
+        public WeaponItem Weapon => IsPlayer ? (WeaponItem)btl_util.getWeaponNumber(Data) : WeaponItem.NoWeapon;
+        public Byte Head => IsPlayer ? FF9StateSystem.Common.FF9.player[PlayerIndex].equip.Head : (Byte)255;
+        public Byte Wrist => IsPlayer ? FF9StateSystem.Common.FF9.player[PlayerIndex].equip.Wrist : (Byte)255;
+        public Byte Armor => IsPlayer ? FF9StateSystem.Common.FF9.player[PlayerIndex].equip.Armor : (Byte)255;
+        public Byte Accessory => IsPlayer ? FF9StateSystem.Common.FF9.player[PlayerIndex].equip.Accessory : (Byte)255;
+        public Boolean IsHealingRod => IsPlayer && Weapon == WeaponItem.HealingRod;
+
+        public Boolean[] StatModifier
+        {
+            get
+            {
+                return this.Data.stat_modifier;
+            }
+        }
+
+        public UInt16 SummonCount => Data.summon_count;
+        public Int16 CriticalRateBonus
+        {
+            get => Data.critical_rate_deal_bonus;
+            set => Data.critical_rate_deal_bonus = value;
+        }
+        public Int16 CriticalRateWeakening
+        {
+            get => Data.critical_rate_receive_bonus;
+            set => Data.critical_rate_receive_bonus = value;
+        }
+
         public MutableBattleCommand AttackCommand => Commands[0];
-        
+
         private MutableBattleCommand[] _commands;
         public MutableBattleCommand[] Commands => _commands ??= Data.cmd.Select(cmd => new MutableBattleCommand(cmd)).ToArray();
+
+        public Boolean IsMonsterTransform => Data.is_monster_transform;
+
+        public Int32 BattlePosX
+        {
+            get => btl_scrp.GetCharacterData(Data, 140);
+            set
+            {
+                btl_scrp.SetCharacterData(Data, 140, value);
+                Data.base_pos.x = Data.pos.x;
+            }
+        }
+        public Int32 BattlePosY
+        {
+            get => btl_scrp.GetCharacterData(Data, 141);
+            set
+            {
+                btl_scrp.SetCharacterData(Data, 141, value);
+                Data.base_pos.y = Data.pos.y;
+            }
+        }
+        public Int32 BattlePosZ
+        {
+            get => btl_scrp.GetCharacterData(Data, 142);
+            set
+            {
+                btl_scrp.SetCharacterData(Data, 142, value);
+                Data.base_pos.z = Data.pos.z;
+            }
+        }
+        public Int32 BattleScaleX
+        {
+            get => Data.geo_scale_x;
+            set => geo.geoScaleSetXYZ(Data, value, Data.geo_scale_y, Data.geo_scale_z, false);
+        }
+        public Int32 BattleScaleY
+        {
+            get => Data.geo_scale_y;
+            set => geo.geoScaleSetXYZ(Data, Data.geo_scale_x, value, Data.geo_scale_z, false);
+        }
+        public Int32 BattleScaleZ
+        {
+            get => Data.geo_scale_z;
+            set => geo.geoScaleSetXYZ(Data, Data.geo_scale_x, Data.geo_scale_y, value, false);
+        }
+
+        public void ScaleModel(Int32 size) // 4096 is the default size
+		{
+            geo.geoScaleSet(Data, size, true);
+        }
 
         public Boolean IsUnderStatus(BattleStatus status)
         {
@@ -217,13 +347,15 @@ namespace Memoria
 
         public void Kill()
         {
-            Data.cur.hp = 0;
-            Data.bi.death_f = 1;
+            CurrentHp = 0; // When using the 10 000 HP enemy threshold system (with CustomBattleFlagsMeaning == 1), Kill only set the enemy's HP to 1 assuming it will trigger its dying sequence
+            if (Data.cur.hp > 0) // Also, let the script handle the animations and sounds in that case
+                return;
 
+            Data.bi.death_f = 1;
             if (Data.bi.player == 0)
                 btl_util.SetEnemyDieSound(Data, btl_util.getEnemyTypePtr(Data).die_snd_no);
 
-            if (!btl_mot.checkMotion(Data, Data.bi.def_idle) && (Data.bi.player == 0 || !btl_mot.checkMotion(Data, 9)) && !btl_util.isCurCmdOwner(Data))
+            if (!btl_mot.checkMotion(Data, Data.bi.def_idle) && (Data.bi.player == 0 || !btl_mot.checkMotion(Data, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_CMD)) && !btl_util.isCurCmdOwner(Data))
             {
                 btl_mot.setMotion(Data, Data.bi.def_idle);
                 Data.evt.animFrame = 0;
@@ -238,8 +370,10 @@ namespace Memoria
             btl_sys.SavePlayerData(Data, true);
             btl_sys.DelCharacter(Data);
             Data.SetDisappear(1);
-            UIManager.Battle.DisplayParty();
+            // The two following lines have been switched for fixing an UI bug (ATB bar glowing, etc... when an ally is snorted)
+            // It seems to fix the bug without introducing another one (the HP/MP figures update strangely but that's because of how the UI cells are managed)
             UIManager.Battle.RemovePlayerFromAction(Data.btl_id, true);
+            UIManager.Battle.DisplayParty();
         }
 
         public void FaceTheEnemy()
@@ -250,7 +384,6 @@ namespace Memoria
         public void FaceAsUnit(BattleUnit unit)
         {
             Int32 angle = btl_mot.GetDirection(unit);
-            Data.evt.rotBattle.eulerAngles = new Vector3(Data.evt.rotBattle.eulerAngles.x, angle, Data.evt.rotBattle.eulerAngles.z);
             Data.rot.eulerAngles = new Vector3(Data.rot.eulerAngles.x, angle, Data.rot.eulerAngles.z);
         }
 
@@ -288,6 +421,305 @@ namespace Memoria
                 ++index;
 
             return index;
+        }
+
+        public void ChangeToMonster(String btlName, Int32 monsterIndex, BattleCommandId commandToReplace, BattleCommandId commandAsMonster, Boolean cancelOnDeath, Boolean updatePts, Boolean updateStat, Boolean updateDef, Boolean updateElement, List<BattleCommandId> disableCommands = null)
+		{
+            if (!IsPlayer) // In order to implement something similar for enemies, script has to be update for that enemy's entry, among other things
+                return;
+            BTL_SCENE scene = new BTL_SCENE();
+            scene.ReadBattleScene(btlName);
+            if (scene.header.TypCount <= 0)
+                return;
+            if (monsterIndex < 0)
+                monsterIndex = Comn.random8() % scene.header.TypCount;
+            if (monsterIndex >= scene.header.TypCount)
+                return;
+            Int32 i;
+            SB2_MON_PARM monsterParam = scene.MonAddr[monsterIndex];
+            if (updatePts)
+            {
+                Data.max.hp = monsterParam.MaxHP;
+                Data.max.mp = monsterParam.MaxMP;
+                Data.cur.hp = Math.Min(Data.cur.hp, Data.max.hp);
+                Data.cur.mp = Math.Min(Data.cur.mp, Data.max.mp);
+            }
+            if (updateStat)
+            {
+                Strength = monsterParam.Element.str;
+                Magic = monsterParam.Element.mgc;
+                Dexterity = monsterParam.Element.dex;
+                Will = monsterParam.Element.wpr;
+            }
+            if (updateDef)
+            {
+                Data.defence.PhisicalDefence = monsterParam.P_DP;
+                Data.defence.PhisicalEvade = monsterParam.P_AV;
+                Data.defence.MagicalDefence = monsterParam.M_DP;
+                Data.defence.MagicalEvade = monsterParam.M_AV;
+            }
+            if (updateElement)
+            {
+                Data.def_attr.invalid = monsterParam.Attr[0];
+                Data.def_attr.absorb = monsterParam.Attr[1];
+                Data.def_attr.half = monsterParam.Attr[2];
+                Data.def_attr.weak = monsterParam.Attr[3];
+            }
+            Data.mesh_current = monsterParam.Mesh[0];
+            Data.mesh_banish = monsterParam.Mesh[1];
+            Data.tar_bone = monsterParam.Bone[3];
+            Data.shadow_bone[0] = monsterParam.ShadowBone;
+            Data.shadow_bone[1] = monsterParam.ShadowBone2;
+            btl_util.SetShadow(Data, monsterParam.ShadowX, monsterParam.ShadowZ);
+            btlseq.btlseqinstance seqreader = new btlseq.btlseqinstance();
+            btlseq.ReadBattleSequence(btlName, ref seqreader);
+            List<AA_DATA> aaList = new List<AA_DATA>();
+            AA_DATA attackAA = null;
+            String[] battleRawText = FF9TextTool.GetBattleText(FF9BattleDB.SceneData["BSC_" + btlName]);
+            if (battleRawText == null)
+                battleRawText = new String[0];
+            Int32 sequenceSfx;
+            Boolean sequenceChannel, sequenceContact;
+            // In order to have more than 1 character transformation, one needs to rewrite the way the new AA are handled (either by rewriting BattleHUD thoroughly or using a better way to insert new AA in the FF9Battle.aa_data list)
+            for (i = 0; i < scene.header.AtkCount && aaList.Count < 63; i++)
+			{
+                if (seqreader.GetEnemyIndexOfSequence(i) != monsterIndex)
+                    continue;
+                if (scene.atk[i].Ref.ScriptId == 64) // Usually scripted dialogs
+                    continue;
+                //if (scene.atk[i].Ref.ScriptId == 8 || scene.atk[i].Ref.ScriptId == 100) // Enemy attack / Enemy accurate attack
+				//{
+                //    attackAA = scene.atk[i];
+                //    continue;
+                //}
+                sequenceSfx = seqreader.GetSFXOfSequence(i, out sequenceChannel, out sequenceContact);
+                if (sequenceSfx >= 0)
+				{
+                    scene.atk[i].Info.VfxIndex = (Int16)sequenceSfx;
+                    if (sequenceContact)
+                    {
+                        attackAA = scene.atk[i];
+                        continue;
+                    }
+				}
+                // Swap the TargetType but keep the DefaultAlly flag since it is on by default only for curative/buffing enemy spells
+                if (scene.atk[i].Info.Target == TargetType.AllAlly)
+                    scene.atk[i].Info.Target = TargetType.AllEnemy;
+                else if (scene.atk[i].Info.Target == TargetType.AllEnemy)
+                    scene.atk[i].Info.Target = TargetType.AllAlly;
+                else if (scene.atk[i].Info.Target == TargetType.ManyAlly)
+                    scene.atk[i].Info.Target = TargetType.ManyEnemy;
+                else if (scene.atk[i].Info.Target == TargetType.ManyEnemy)
+                    scene.atk[i].Info.Target = TargetType.ManyAlly;
+                else if (scene.atk[i].Info.Target == TargetType.RandomAlly)
+                    scene.atk[i].Info.Target = TargetType.RandomEnemy;
+                else if (scene.atk[i].Info.Target == TargetType.RandomEnemy)
+                    scene.atk[i].Info.Target = TargetType.RandomAlly;
+                else if (scene.atk[i].Info.Target == TargetType.SingleAlly)
+                    scene.atk[i].Info.Target = TargetType.SingleEnemy;
+                else if (scene.atk[i].Info.Target == TargetType.SingleEnemy)
+                    scene.atk[i].Info.Target = TargetType.SingleAlly;
+                if (scene.header.TypCount + i < battleRawText.Length)
+                    scene.atk[i].Name = battleRawText[scene.header.TypCount + i];
+                aaList.Add(scene.atk[i]);
+            }
+            CharacterCommands.Commands[(Byte)commandAsMonster].Type = CharacterCommandType.Ability;
+            CharacterCommands.Commands[(Byte)commandAsMonster].Abilities = new Byte[aaList.Count];
+            for (i = 0; i < aaList.Count; i++)
+            {
+                CharacterCommands.Commands[(Byte)commandAsMonster].Abilities[i] = (Byte)(192 + i);
+                FF9StateSystem.Battle.FF9Battle.aa_data[192 + i] = aaList[i];
+                FF9TextTool.SetActionAbilityName(192 + i, aaList[i].Name);
+                //FF9TextTool.SetActionAbilityHelpDesc(192 + i, "");
+            }
+            FF9StateSystem.Battle.FF9Battle.aa_data[192 + aaList.Count] = attackAA;
+            FF9TextTool.SetActionAbilityName(192 + aaList.Count, String.Empty);
+            Data.is_monster_transform = true;
+            Data.monster_transform = new BTL_DATA.MONSTER_TRANSFORM();
+            Data.monster_transform.base_command = commandToReplace;
+            Data.monster_transform.new_command = commandAsMonster;
+            Data.monster_transform.attack = attackAA == null ? 0 : (UInt32)(192 + aaList.Count);
+            Data.monster_transform.replace_point = updatePts;
+            Data.monster_transform.replace_stat = updateStat;
+            Data.monster_transform.replace_defence = updateDef;
+            Data.monster_transform.replace_element = updateElement;
+            Data.monster_transform.cancel_on_death = cancelOnDeath;
+            Data.monster_transform.death_sound = monsterParam.DieSfx;
+            Data.monster_transform.fade_counter = 0;
+            for (i = 0; i < 3; i++)
+                Data.monster_transform.cam_bone[i] = monsterParam.Bone[i];
+            for (i = 0; i < 6; i++)
+            {
+                Data.monster_transform.icon_bone[i] = monsterParam.IconBone[i];
+                Data.monster_transform.icon_y[i] = monsterParam.IconY[i];
+                Data.monster_transform.icon_z[i] = monsterParam.IconZ[i];
+            }
+            if (disableCommands == null)
+                Data.monster_transform.disable_commands = new List<BattleCommandId>();
+            else
+                Data.monster_transform.disable_commands = disableCommands;
+            Data.monster_transform.resist_added = 0;
+            if (attackAA == null)
+                Data.monster_transform.resist_added |= BattleStatus.Berserk | BattleStatus.Confuse;
+            btl_stat.RemoveStatuses(Data, Data.monster_transform.resist_added);
+            Data.monster_transform.resist_added &= ~ResistStatus;
+            ResistStatus |= Data.monster_transform.resist_added;
+            // Let the spell sequence handle the model fadings (in and out)
+            //Data.SetActiveBtlData(false);
+            String geoName = FF9BattleDB.GEO.GetValue(monsterParam.Geo);
+            Data.gameObject = ModelFactory.CreateModel(geoName, true);
+            Data.bi.t_gauge = 0;
+            if (IsUnderStatus(BattleStatus.Trance))
+            {
+                Data.stat.cur &= ~BattleStatus.Trance;
+                if (Trance == Byte.MaxValue)
+                    Trance = Byte.MaxValue - 1;
+            }
+            //Data.SetActiveBtlData(true);
+            geoName = geoName.Substring(4);
+            for (i = 0; i < Data.mot.Length; i++)
+                Data.mot[i] = String.Empty;
+            Boolean useAlternateAnim = geoName.CompareTo("MON_B3_072") == 0; // Gargoyle (to be completed)
+            Boolean useDieDmg = (monsterParam.Flags & 2) != 0;
+            Data.mot[0] = FF9BattleDB.Animation[monsterParam.Mot[useAlternateAnim ? 1 : 0]];
+            Data.mot[1] = Data.mot[0];
+            Data.mot[2] = FF9BattleDB.Animation[monsterParam.Mot[useAlternateAnim ? 3 : 2]];
+            Data.mot[3] = Data.mot[2];
+            Data.mot[4] = !useDieDmg ? String.Empty : useAlternateAnim ? Data.mot[3] : Data.mot[2];
+            Data.mot[8] = FF9BattleDB.Animation[monsterParam.Mot[useDieDmg ? 3 : useAlternateAnim ? 5 : 4]];
+            Data.mot[9] = Data.mot[0];
+            Data.mot[13] = Data.mot[0];
+            Data.mot[15] = Data.mot[0];
+            Data.mot[16] = Data.mot[0];
+            Data.mot[17] = Data.mot[0];
+            Data.mot[19] = Data.mot[0];
+            Data.mot[27] = Data.mot[0];
+            Data.mot[29] = Data.mot[0];
+            Data.mot[30] = Data.mot[0];
+            // Try to automatically get a few animations
+            // Physical attack
+            if (geoName.CompareTo("MON_B3_147") == 0 && Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_040") != (UnityEngine.Object)null)
+            {
+                Data.mot[20] = "ANH_" + geoName + "_040"; // Deathguise's Spin
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_041") != (UnityEngine.Object)null)
+                    Data.mot[21] = "ANH_" + geoName + "_041";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_042") != (UnityEngine.Object)null)
+                    Data.mot[22] = "ANH_" + geoName + "_042";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_043") != (UnityEngine.Object)null)
+                    Data.mot[23] = "ANH_" + geoName + "_043";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_044") != (UnityEngine.Object)null)
+                    Data.mot[24] = "ANH_" + geoName + "_044";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_045") != (UnityEngine.Object)null)
+                    Data.mot[25] = "ANH_" + geoName + "_045";
+            }
+            else if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_010") != (UnityEngine.Object)null)
+            {
+                Data.mot[20] = "ANH_" + geoName + "_010";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_011") != (UnityEngine.Object)null)
+                    Data.mot[21] = "ANH_" + geoName + "_011";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_012") != (UnityEngine.Object)null)
+                    Data.mot[22] = "ANH_" + geoName + "_012";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_013") != (UnityEngine.Object)null)
+                    Data.mot[23] = "ANH_" + geoName + "_013";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_014") != (UnityEngine.Object)null)
+                    Data.mot[24] = "ANH_" + geoName + "_014";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_015") != (UnityEngine.Object)null)
+                    Data.mot[25] = "ANH_" + geoName + "_015";
+            }
+            else if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_030") != (UnityEngine.Object)null)
+            {
+                Data.mot[20] = "ANH_" + geoName + "_030";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_031") != (UnityEngine.Object)null)
+                    Data.mot[21] = "ANH_" + geoName + "_031";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_032") != (UnityEngine.Object)null)
+                    Data.mot[22] = "ANH_" + geoName + "_032";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_033") != (UnityEngine.Object)null)
+                    Data.mot[23] = "ANH_" + geoName + "_033";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_034") != (UnityEngine.Object)null)
+                    Data.mot[24] = "ANH_" + geoName + "_034";
+                if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_035") != (UnityEngine.Object)null)
+                    Data.mot[25] = "ANH_" + geoName + "_035";
+            }
+            // Cast Init / Loop / End
+            if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_020") != (UnityEngine.Object)null)
+                Data.mot[26] = "ANH_" + geoName + "_020";
+            if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_021") != (UnityEngine.Object)null)
+                Data.mot[27] = "ANH_" + geoName + "_021";
+            if (Data.gameObject.GetComponent<Animation>().GetClip("ANH_" + geoName + "_022") != (UnityEngine.Object)null)
+                Data.mot[28] = "ANH_" + geoName + "_022";
+            // Duplicate existing animations or create dummy ones but have different names for btl_mot.checkMotion proper functioning
+            List<String> uniqueAnimList = new List<String>();
+            for (i = 0; i < Data.mot.Length; i++)
+			{
+                if (String.IsNullOrEmpty(Data.mot[i]) || uniqueAnimList.Contains(Data.mot[i]))
+                {
+                    String newName = "ANH_" + geoName + "_DUMMY_" + i;
+                    if (!String.IsNullOrEmpty(Data.mot[i]) && Data.gameObject.GetComponent<Animation>().GetClip(Data.mot[i]) != (UnityEngine.Object)null)
+                        Data.gameObject.GetComponent<Animation>().AddClip(Data.gameObject.GetComponent<Animation>().GetClip(Data.mot[i]), newName);
+                    else
+                        AnimationClipReader.CreateDummyAnimationClip(Data.gameObject, newName);
+                    Data.mot[i] = newName;
+                }
+                else
+				{
+                    if (Data.gameObject.GetComponent<Animation>().GetClip(Data.mot[i]) == (UnityEngine.Object)null)
+                        AnimationClipReader.CreateDummyAnimationClip(Data.gameObject, Data.mot[i]);
+                    uniqueAnimList.Add(Data.mot[i]);
+                }
+            }
+            btl_mot.setMotion(Data, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_NORMAL);
+        }
+
+        public void ReleaseChangeToMonster()
+        {
+            PLAYER p = FF9StateSystem.Common.FF9.party.member[Position];
+            if (Data.monster_transform.replace_point)
+            {
+                Data.max.hp = p.max.hp;
+                Data.max.mp = p.max.mp;
+                Data.cur.hp = Math.Min(Data.cur.hp, Data.max.hp);
+                Data.cur.mp = Math.Min(Data.cur.mp, Data.max.mp);
+            }
+            if (Data.monster_transform.replace_stat)
+            {
+                Strength = p.elem.str;
+                Magic = p.elem.mgc;
+                Dexterity = p.elem.dex;
+                Will = p.elem.wpr;
+            }
+            if (Data.monster_transform.replace_defence)
+            {
+                Data.defence.PhisicalDefence = p.defence.PhisicalDefence;
+                Data.defence.PhisicalEvade = p.defence.PhisicalEvade;
+                Data.defence.MagicalDefence = p.defence.MagicalDefence;
+                Data.defence.MagicalEvade = p.defence.MagicalEvade;
+            }
+            if (Data.monster_transform.replace_element)
+            {
+                btl_eqp.InitEquipPrivilegeAttrib(p, Data);
+            }
+            ResistStatus &= ~Data.monster_transform.resist_added;
+            Data.mesh_current = 0;
+            Data.mesh_banish = UInt16.MaxValue;
+            Data.tar_bone = 0;
+            Data.shadow_bone[0] = btl_init.ShadowDataPC[p.info.serial_no][0];
+            Data.shadow_bone[1] = btl_init.ShadowDataPC[p.info.serial_no][1];
+            btl_util.SetShadow(Data, btl_init.ShadowDataPC[p.info.serial_no][2], btl_init.ShadowDataPC[p.info.serial_no][3]);
+            Data.gameObject.SetActive(false);
+            Data.gameObject = Data.originalGo;
+            geo.geoScaleReset(Data);
+            if (battle.TRANCE_GAUGE_FLAG != 0 && (p.category & 16) == 0 && (Data.bi.slot_no != 2 || battle.GARNET_DEPRESS_FLAG == 0))
+                Data.bi.t_gauge = 1;
+            // Reset the position even if ChangeToMonster doesn't change it by itself
+            Data.pos.x = (Data.evt.posBattle.x = (Data.evt.pos[0] = (Data.base_pos.x = Data.original_pos.x)));
+            Data.pos.y = (Data.evt.posBattle.y = (Data.evt.pos[1] = (Data.base_pos.y = (Data.original_pos.y + (!btl_stat.CheckStatus(Data, BattleStatus.Float) ? 0 : -200)))));
+            Data.pos.z = (Data.evt.posBattle.z = (Data.evt.pos[2] = (Data.base_pos.z = (Data.original_pos.z + (Data.bi.row == 0 ? -400 : 0)))));
+            for (Int32 i = 0; i < 34; i++)
+                Data.mot[i] = btl_mot.mot[p.info.serial_no, i];
+            btl_mot.setMotion(Data, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_NORMAL);
+            Data.evt.animFrame = 0;
+            btl_mot.HideMesh(Data, UInt16.MaxValue);
+            Data.monster_transform.fade_counter = 2;
         }
     }
 }

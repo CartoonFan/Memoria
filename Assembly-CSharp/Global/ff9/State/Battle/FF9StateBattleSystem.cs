@@ -45,7 +45,7 @@ public class FF9StateBattleSystem
 		this.seq_work_set = new SEQ_WORK_SET();
 		this.btl_scene = new BTL_SCENE();
 		this.btl2d_work_set = new BTL2D_WORK();
-		this.status_data = new STAT_DATA[32];
+		this.status_data = EntryCollection.CreateWithDefaultElement<STAT_DATA>(32);
 	    this.aa_data = EntryCollection.CreateWithDefaultElement<AA_DATA>(192);
 	    this.add_status = EntryCollection.CreateWithDefaultElement<BattleStatusEntry>(64);
 		this.map = new FF9StateBattleMap();
@@ -99,7 +99,7 @@ public class FF9StateBattleSystem
 
 	public UInt16 cmd_status;
 
-	public Byte cmd_mode;
+	public command_mode_index cmd_mode;
 
 	public Byte phantom_no;
 
@@ -115,7 +115,7 @@ public class FF9StateBattleSystem
 
 	public BTL2D_WORK btl2d_work_set;
 
-	public STAT_DATA[] status_data;
+	public EntryCollection<STAT_DATA> status_data;
 
 	public EntryCollection<AA_DATA> aa_data;
 

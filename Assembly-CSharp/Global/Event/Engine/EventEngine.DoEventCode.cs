@@ -363,6 +363,12 @@ public partial class EventEngine
                         num12 = 11849;
                     }
                 }
+                // TODO Check Native: #147
+                else if (FF9StateSystem.Common.FF9.fldMapNo == 2800 && po.sid == 17)
+                {
+                    num11 = -4702;
+                    num12 = 2702;
+                }
                 else if ((Int32)FF9StateSystem.Common.FF9.fldMapNo == 108 && (Int32)po.sid == 2)
                 {
                     if (num11 == -111 && num12 == -210)
@@ -1067,6 +1073,7 @@ public partial class EventEngine
                 return 0;
             case EBin.event_code_binary.ASLEEP:
                 actor1.sleep = (UInt16)this.getv2();
+                AnimationFactory.AddAnimWithAnimatioName(actor1.go, FF9DBAll.AnimationDB.GetValue((Int32)actor1.sleep));
                 return 0;
             case EBin.event_code_binary.NOINITMES:
                 this.eTb.InhInitMes();
@@ -1350,6 +1357,7 @@ public partial class EventEngine
                 actor1.jump = (UInt16)this.getv2();
                 actor1.jump0 = (Byte)this.getv1();
                 actor1.jump1 = (Byte)this.getv1();
+                AnimationFactory.AddAnimWithAnimatioName(actor1.go, FF9DBAll.AnimationDB.GetValue((Int32)actor1.jump));
                 return 0;
             case EBin.event_code_binary.MESA:
                 PosObj targetPo1 = (PosObj)this.GetObj1();
@@ -1719,8 +1727,13 @@ public partial class EventEngine
                 EventInput.PSXCntlClearPadMask(this.getv1(), Convert.ToUInt32(this.getv2()));
                 return 0;
             case EBin.event_code_binary.DANIM:
-                this.ExecAnim((Actor)this.GetObj1(), this.getv2());
-                return 0;
+                {
+                    Actor actObj = (Actor)this.GetObj1();
+                    Int32 animId = this.getv2();
+                    AnimationFactory.AddAnimWithAnimatioName(actObj.go, FF9DBAll.AnimationDB.GetValue(animId));
+                    this.ExecAnim(actObj, animId);
+                    return 0;
+                }
             case EBin.event_code_binary.DWAITANIM:
                 if (((Int32)((Actor)this.GetObj1()).animFlag & EventEngine.afExec) == 0)
                     return 0;
@@ -2009,9 +2022,9 @@ public partial class EventEngine
                     PLAYER player = FF9StateSystem.Common.FF9.player[characterIndex];
                     Int32 newHp = this.getv2();
                     if (newHp > player.max.hp)
-                        newHp = player.max.hp;
+                        newHp = (Int32)player.max.hp;
 
-                    player.cur.hp = (UInt16)newHp;
+                    player.cur.hp = (UInt32)newHp;
                     FF9StateSystem.Common.FF9.player[characterIndex] = player;
 
                     // https://github.com/Albeoris/Memoria/issues/22
@@ -2031,9 +2044,9 @@ public partial class EventEngine
                     PLAYER player = FF9StateSystem.Common.FF9.player[characterIndex];
                     Int32 newMp = this.getv2();
                     if (newMp > player.max.mp)
-                        newMp = player.max.mp;
+                        newMp = (Int32)player.max.mp;
 
-                    player.cur.mp = (Int16)newMp;
+                    player.cur.mp = (UInt32)newMp;
                     FF9StateSystem.Common.FF9.player[characterIndex] = player;
 
                     // https://github.com/Albeoris/Memoria/issues/22
@@ -2075,8 +2088,33 @@ public partial class EventEngine
                 vib.VIB_setPlayRange((Int16)this.getv1(), (Int16)this.getv1());
                 return 0;
             case EBin.event_code_binary.HINT:
-                num1 = this.getv1();
-                num3 = this.getv2();
+                num1 = this.getv1(); // The only values of num1 are 0x5, 0x11 and 0x91 in non-modded scripts
+                num2 = this.getv2();
+                if (num1 == 0x30)
+                {
+                    // PreloadField( 48, ... )
+                    // Add a field to the list of background free-view mode
+                    this.sExternalFieldList.Add((short)num2);
+                }
+                else if (num1 == 0x31)
+                {
+                    // PreloadField( 49, ... )
+                    // Start the background free-view mode, starting by the selected field
+                    this.sOriginalFieldName = this.fieldmap.mapName;
+                    this.sOriginalFieldNo = FF9StateSystem.Common.FF9.fldMapNo;
+                    this.sExternalFieldChangeField = num2;
+                    this.sExternalFieldChangeCamera = 0;
+                    this.sExternalFieldFade = 0;
+                    foreach (Transform field_transform in this.fieldmap.transform)
+                        if (field_transform.gameObject.name != "Background")
+                            sOriginalFieldGameObjects.Add(field_transform.gameObject);
+                    foreach (GameObject field_object in this.sOriginalFieldGameObjects)
+                    {
+                        field_object.transform.parent = null;
+                        field_object.SetActive(false);
+                    }
+                    this.sExternalFieldMode = true;
+                }
                 return 0;
             case EBin.event_code_binary.JOIN:
                 Int32 slot_no = this.chr2slot(this.getv1());

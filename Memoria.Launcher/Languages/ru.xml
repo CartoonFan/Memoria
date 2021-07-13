@@ -1,211 +1,242 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Data>
 
-  <Measurement
-    Elapsed = "Прошло"
-    Remaining = "Осталось"
-    SecondAbbr = "сек"
-    ByteAbbr = "Б"
-    KByteAbbr = "КБ"
-    MByteAbbr = "МБ"
-    GByteAbbr = "ГБ"
-    TByteAbbr = "ТБ"
-    PByteAbbr = "ПБ"
-    EByteAbbr = "ЭБ"
-    />
-  
-  <Button
-    OK = "OK"
-    Cancel = "Отмена"
-    Continue = "Продолжить"
-    Clone = "Сдублировать"
-    Remove = "Удалить"
-    Rollback = "Откатить"
-    Inject = "Внедрить"
-    SaveAs = "Сохранить как..."
-    Exit = "Выход"
-    Exiting = "Выходим..."
-    Launch = "Запуск"
-    Launching = "Запускаем..."
-    />
+	<Measurement
+			Elapsed = "Прошло"
+			Remaining = "Осталось"
+			SecondAbbr = "сек"
+			ByteAbbr = "Б"
+			KByteAbbr = "КБ"
+			MByteAbbr = "МБ"
+			GByteAbbr = "ГБ"
+			TByteAbbr = "ТБ"
+			PByteAbbr = "ПБ"
+			EByteAbbr = "ЭБ"
+			/>
 
-  <Settings
-    ActiveMonitor = "Активный монитор:"
-    Resolution = "Разрешение:"
-    Windowed = "В окне"
-    AudioSamplingFrequency = "Частота дискретизации звука:"
-    AudioSamplingFrequencyFormat = "{0} Гц"
-    Debuggable = "Отладка"
-    CheckUpdates = "Проверка обновлений"
-  />
+	<Button
+			OK = "OK"
+			Cancel = "Отмена"
+			Continue = "Продолжить"
+			Clone = "Сдублировать"
+			Remove = "Удалить"
+			Rollback = "Откатить"
+			Inject = "Внедрить"
+			SaveAs = "Сохранить как..."
+			Exit = "Выход"
+			Exiting = "Выходим..."
+			Launch = "Запуск"
+			Launching = "Запускаем..."
+			/>
 
-  <SdLib
-    Caption = "Модификация SdLib.dll"
-    PrimaryMonitor = " [Основной]"
-    AreYouSure = "Вы уверены, что хотите модифицировать SdLib.dll?"
-    SuccessBoth = "SdLib.dll успешно модифицирована для обеих платформ."
-    SuccessX64 = "SdLib.dll успешно модифицирована, но только для x64 платформы."
-    SuccessX86 = "SdLib.dll успешно модифицирована, но только для x86 платформы."
-    Fail = "К сожалению, нам не удалось модифицировать SdLib.dll. Пожалуйста, поделитесь своей версией библиотеки, мы попробуем что-нибудь придумать."
-    CannotRead = "Не удалось прочитать текущее значение частоты дискретизации звука из файла:"
-    CannotWrite = "Не уадлось модифицировать текущее значение частоты дискретизации в файле SdLib.dll"
-  />
+	<Settings
+			ActiveMonitor = "Активный монитор:"
+			Resolution = "Разрешение:"
+			WindowMode = "Режим экрана:"
+			Window = "Оконный"
+			ExclusiveFullscreen = "Полноэкранный"
+			BorderlessFullscreen = "Оконный (без рамок)"
+			AudioSamplingFrequency = "Частота дискретизации звука:"
+			AudioSamplingFrequencyFormat = "{0} Гц"
+			Debuggable = "Отладка"
+			CheckUpdates = "Проверка обновлений"
+			IniOptions = "Options"
+			Widescreen = " Widescreen (16:9)"
+			SkipIntrosToMainMenu = " Пропуск заставки"
+			SkipBattleLoading = "Время загрузки битвы"
+			HideCardsBubbles = " Hide cards bubbles"
+			TurnBasedBattles = " Пошаговые бои"
+			SoundVolume = "Громкость звука"
+			MusicVolume = "Громкость музыки"
+			IniCheats = "Читы"
+			MaxStealRate = " 100% кража"
+			DisableCantConcentrate = " Гарнет не теряет концентрацию"
+			SpeedMode = " Ускорение | F1"
+			SpeedFactor = "Множитель ускорения"
+			PermanentTranse = " Постоянный транс | F2"
+			MaxDamage = " Максимальный урон | F3"
+			NoRandomBattles = " Без случайных битв | F4"
+			PermanentCheats = " Постоянные читы | F5 F6 F7"
+			UsePsxFont = "Использовать PSX-шрифт"
+			FontChoice = "шрифт"
+			SBUIenabled = "Масштабированный UI битвы"
+			BattleFPS = "Скорость анимации в бою (реком. 22)"
+			/>
 
-  <InfoProvider>
-    
-    <ApplicationConfig
-      Title="Настройки"
-      Description="Различные настройки приложения."
-      NewTitle="Новые"
-      NewDescription="Инициализирует все настройки значениями по умолчанию."
-      FileTitle="Из файла"
-      FileDescription="Считывает настройки приложения из файла {0}"
-    />
+	<SdLib
+			Caption = "Модификация SdLib.dll"
+			PrimaryMonitor = " [Основной]"
+			AreYouSure = "Вы уверены, что хотите модифицировать SdLib.dll?"
+			SuccessBoth = "SdLib.dll успешно модифицирована для обеих платформ."
+			SuccessX64 = "SdLib.dll успешно модифицирована, но только для x64 платформы."
+			SuccessX86 = "SdLib.dll успешно модифицирована, но только для x86 платформы."
+			Fail = "К сожалению, нам не удалось модифицировать SdLib.dll. Пожалуйста, поделитесь своей версией библиотеки, мы попробуем что-нибудь придумать."
+			CannotRead = "Не удалось прочитать текущее значение частоты дискретизации звука из файла:"
+			CannotWrite = "Не уадлось модифицировать текущее значение частоты дискретизации в файле SdLib.dll"
+			/>
 
-    <GameLocation
-      Title="Каталог игры"
-      Description="Местоположении игровых файлов."
-      ConfigurationTitle="Из настроек"
-      ConfigurationDescription="Использует информацию, сохранённую в настроечном файле."
-      SteamRegistryTitle="Из реестр (Steam)"
-      SteamRegistryDescription="Получает информацию из реестра Windows, используя данные Steam."
-      UserTitle="Ручной выбор"
-      UserDescription="Позволяет вручную выбрать каталог, в который была установлена игра."
-    />
+	<SteamOverlay
+			OptionLabel = " Исправить Steam Overlay"
+			Caption = "Steam Overlay"
+			FixAreYouSure = "Сейчас в вашу ОС будет установлен хук, который вместо файла FF9_Launcher.exe будет запускать FF9_Launcher.fix. При этом все проверки целостности файла Steam будут завершаться успешно. Таким образом, это решит проблему того, что у некоторых пользователей периодически отключался функционал Steam Overlay, и связанные с ним фичи: достижения и поддержка контроллера.&#13;&#10;&#13;&#10;Однако, будьте внимательны, и НЕ УДАЛЯЙТЕ игру, её папку или файл FF9_Launcher.fix предварительно не откатив внесенные изменения. В противном случае, хук так и останется у вас в системе, и после новой установки игры вам не удастся её запустить. Откатить изменения вы можете в лаунчере или вручную запустив Memoria.SteamFix.exe в папке с игрой.&#13;&#10;&#13;&#10;Вы уверены, что хотите продолжить?"
+			RollbackAreYouSure = "Сейчас мы уберём внесённые изменения, после чего проблема со Steam Overlay вернётся.&#13;&#10;&#13;&#10;Это может привести к отключению достижений и проблемам с контроллером.&#13;&#10;&#13;&#10;Вы уверены, что хотите продолжить?"
+	/>
 
-    <WorkingLocation
-      Title="Рабочий каталог"
-      Description="Директория для хранения результатов работы приложения."
-      ConfigurationTitle="Из настроек"
-      ConfigurationDescription="Использует информацию, сохранённую в настроечном файле."
-      UserTitle="Ручной выбор"
-      UserDescription="Позволяет вручную выбрать рабочий каталог."
-    />
+	<InfoProvider>
 
-    <TextEncoding
-      Title="Кодировки"
-      Description="Кодировки для распаковки и упаковки игровых текстов."
-      NewTitle="Новая"
-      NewDescription="Инициализирует стандартную кодировку на основе Windows-1252 кодировки."
-      WorkingLocationTitle="Из рабочего каталога"
-      WorkingLocationDescription="Считывает кодировку из рабочего каталога."
-      UserTitle="Редактировать"
-      UserDescription="Изменить текущую кодировку."
-    />
+		<ApplicationConfig
+				Title="Настройки"
+				Description="Различные настройки приложения."
+				NewTitle="Новые"
+				NewDescription="Инициализирует все настройки значениями по умолчанию."
+				FileTitle="Из файла"
+				FileDescription="Считывает настройки приложения из файла {0}"
+				/>
 
-    <AudioSettings
-      Title="Настройки звука"
-      Description="Настройки аудио-устройства, используемого для воспроизведения звука."
-      NewTitle="Новые"
-      NewDescription="Инициализирует стандартные настройки аудио-устройства."
-    />
-    
-  </InfoProvider>
+		<GameLocation
+				Title="Каталог игры"
+				Description="Местоположении игровых файлов."
+				ConfigurationTitle="Из настроек"
+				ConfigurationDescription="Использует информацию, сохранённую в настроечном файле."
+				SteamRegistryTitle="Из реестр (Steam)"
+				SteamRegistryDescription="Получает информацию из реестра Windows, используя данные Steam."
+				UserTitle="Ручной выбор"
+				UserDescription="Позволяет вручную выбрать каталог, в который была установлена игра."
+				/>
 
-  <Dockable>
-    
-    <DataSources Header="Источники данных"/>
-    
-    <GameFileCommander
-      Header="Ресурсы игры"
-      Unpack="Распаковать"
-      Pack="Упаковать"
-      ArchivesNode ="Архивы"
-      />
+		<WorkingLocation
+				Title="Рабочий каталог"
+				Description="Директория для хранения результатов работы приложения."
+				ConfigurationTitle="Из настроек"
+				ConfigurationDescription="Использует информацию, сохранённую в настроечном файле."
+				UserTitle="Ручной выбор"
+				UserDescription="Позволяет вручную выбрать рабочий каталог."
+				/>
 
-    <GameFilePreview
-      Header="Предпросмотр"
-      >
-      
-      <Ykd
-        ResourceRemovingTitle = "Удаление"
-        ConfirmResourceRemoving = "Вы уверены, что хотите удалить этот ресурс?"
-        />
-      
-    </GameFilePreview>
-  
-  </Dockable>
+		<TextEncoding
+				Title="Кодировки"
+				Description="Кодировки для распаковки и упаковки игровых текстов."
+				NewTitle="Новая"
+				NewDescription="Инициализирует стандартную кодировку на основе Windows-1252 кодировки."
+				WorkingLocationTitle="Из рабочего каталога"
+				WorkingLocationDescription="Считывает кодировку из рабочего каталога."
+				UserTitle="Редактировать"
+				UserDescription="Изменить текущую кодировку."
+				/>
 
-  <EncodingEditor>
+		<AudioSettings
+				Title="Настройки звука"
+				Description="Настройки аудио-устройства, используемого для воспроизведения звука."
+				NewTitle="Новые"
+				NewDescription="Инициализирует стандартные настройки аудио-устройства."
+				/>
 
-    <List
-      Name = "Название"
-      Pattern = "Маска"
-      Encoding = "Кодировка"
-      Font = "Шрифт"
-      Edit = "Ред."
-      />
+	</InfoProvider>
 
-    <EncodingSelectDialog
-      Title = "Выбор кодировки"
-      Watermark = "Введите имя кодировки..."
-      ConfirmMessageFormat = "Вы выбрали [{0}]. Верно?"
-      ErrorMessageFormat = "Не удалось распознать кодировку [{0}]."
-      />
+	<Dockable>
 
-    <EncodingEditDialog
-      Title = "Настройка кодировки"
-      />
-    
-    <Main
-      Before = "До:"
-      Width = "Ширина:"
-      After = "После:"
-      FromText = "Из текста:"
-      ToText = "В текст:"
-      />
-    
-    <Extra
-      Row = "Ряд:"
-      Column = "Колонка:"
-      FromText = "Из текста:"
-      ToText = "В текст:"
-      />
+		<DataSources Header="Источники данных"/>
 
-  </EncodingEditor>
+		<GameFileCommander
+				Header="Ресурсы игры"
+				Unpack="Распаковать"
+				Pack="Упаковать"
+				ArchivesNode ="Архивы"
+				/>
 
-  <Dialogue>
+		<GameFilePreview
+				Header="Предпросмотр"
+				>
 
-    <SaveAs
-      Title = "Сохранить как..."
-      />
+			<Ykd
+					ResourceRemovingTitle = "Удаление"
+					ConfirmResourceRemoving = "Вы уверены, что хотите удалить этот ресурс?"
+					/>
 
-  </Dialogue>
-  
-  <Message>
-    
-    <Done
-      Title = "Готово!"
-      ExtractionCompleteFormat = "Распаковка завершена за {0:hh\:mm\:ss}."
-      InjectionCompleteFormat = "Упаковка завершена за {0:hh\:mm\:ss}."
-      />
-    
-    <Question
-      Title = "Вопрос"
-      AreYouSureTitle = "Вы уверены?"
-      NewVersionIsAvailable = "Доступна новая версия. Скачать?"
-      />
-    
-    <Error
-      Title = "Ошибка!"
-      />
-    
-  </Message>
-  
-  <Error>
-    
-    <File
-      UnknownFormat = "Неизвестный формат файла."
-      />
+		</GameFilePreview>
 
-    <Process
-      CannotGetExecutablePath = "Не удаётся получить путь к исполняемому модулю процесса."
-      />
+	</Dockable>
 
-    <Text
-      TooLongTagNameFormat = "Слишком длинное имя тэга: {0}"
-      />
-    
-  </Error>
+	<EncodingEditor>
+
+		<List
+				Name = "Название"
+				Pattern = "Маска"
+				Encoding = "Кодировка"
+				Font = "Шрифт"
+				Edit = "Ред."
+				/>
+
+		<EncodingSelectDialog
+				Title = "Выбор кодировки"
+				Watermark = "Введите имя кодировки..."
+				ConfirmMessageFormat = "Вы выбрали [{0}]. Верно?"
+				ErrorMessageFormat = "Не удалось распознать кодировку [{0}]."
+				/>
+
+		<EncodingEditDialog
+				Title = "Настройка кодировки"
+				/>
+
+		<Main
+				Before = "До:"
+				Width = "Ширина:"
+				After = "После:"
+				FromText = "Из текста:"
+				ToText = "В текст:"
+				/>
+
+		<Extra
+				Row = "Ряд:"
+				Column = "Колонка:"
+				FromText = "Из текста:"
+				ToText = "В текст:"
+				/>
+
+	</EncodingEditor>
+
+	<Dialogue>
+
+		<SaveAs
+				Title = "Сохранить как..."
+				/>
+
+	</Dialogue>
+
+	<Message>
+
+		<Done
+				Title = "Готово!"
+				ExtractionCompleteFormat = "Распаковка завершена за {0:hh\:mm\:ss}."
+				InjectionCompleteFormat = "Упаковка завершена за {0:hh\:mm\:ss}."
+				/>
+
+		<Question
+				Title = "Вопрос"
+				AreYouSureTitle = "Вы уверены?"
+				NewVersionIsAvailable = "Доступна новая версия. Скачать?"
+				/>
+
+		<Error
+				Title = "Ошибка!"
+				/>
+
+	</Message>
+
+	<Error>
+
+		<File
+				UnknownFormat = "Неизвестный формат файла."
+				/>
+
+		<Process
+				CannotGetExecutablePath = "Не удаётся получить путь к исполняемому модулю процесса."
+				/>
+
+		<Text
+				TooLongTagNameFormat = "Слишком длинное имя тэга: {0}"
+				/>
+
+	</Error>
 
 </Data>

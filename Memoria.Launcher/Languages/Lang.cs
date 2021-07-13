@@ -27,8 +27,10 @@ namespace Memoria.Launcher
                     cur = XmlHelper.LoadEmbadedDocument(assembly, $"Languages.{name}.xml");
                     if (cur != null)
                         break;
+                    
                 }
-
+                //File.AppendAllText("MBROutput2.txt", name + \n");
+                
                 return new Lang(def, cur ?? def);
             }
             catch (Exception ex)
@@ -135,11 +137,36 @@ namespace Memoria.Launcher
             public static readonly string ActiveMonitor = GetSettings(nameof(ActiveMonitor));
             public static readonly string PrimaryMonitor = GetSettings(nameof(PrimaryMonitor));
             public static readonly string Resolution = GetSettings(nameof(Resolution));
-            public static readonly string Windowed = GetSettings(nameof(Windowed));
+            public static readonly string WindowMode = GetSettings(nameof(WindowMode));
+            public static readonly string Window = GetSettings(nameof(Window));
+            public static readonly string ExclusiveFullscreen = GetSettings(nameof(ExclusiveFullscreen));
+            public static readonly string BorderlessFullscreen = GetSettings(nameof(BorderlessFullscreen));
             public static readonly string AudioSamplingFrequency = GetSettings(nameof(AudioSamplingFrequency));
             public static readonly string AudioSamplingFrequencyFormat = GetSettings(nameof(AudioSamplingFrequencyFormat));
             public static readonly string Debuggable = GetSettings(nameof(Debuggable));
             public static readonly string CheckUpdates = GetSettings(nameof(CheckUpdates));
+            public static readonly string IniOptions = GetSettings(nameof(IniOptions));
+            public static readonly string Widescreen = GetSettings(nameof(Widescreen));
+            public static readonly string SkipIntrosToMainMenu = GetSettings(nameof(SkipIntrosToMainMenu));
+            public static readonly string SkipBattleLoading = GetSettings(nameof(SkipBattleLoading));
+            public static readonly string HideCardsBubbles = GetSettings(nameof(HideCardsBubbles));
+            public static readonly string TurnBasedBattles = GetSettings(nameof(TurnBasedBattles));
+            public static readonly string SoundVolume = GetSettings(nameof(SoundVolume));
+            public static readonly string MusicVolume = GetSettings(nameof(MusicVolume));
+            public static readonly string IniCheats = GetSettings(nameof(IniCheats));
+            public static readonly string MaxStealRate = GetSettings(nameof(MaxStealRate));
+            public static readonly string DisableCantConcentrate = GetSettings(nameof(DisableCantConcentrate));
+            public static readonly string SpeedMode = GetSettings(nameof(SpeedMode));
+            public static readonly string SpeedFactor = GetSettings(nameof(SpeedFactor));
+            public static readonly string PermanentTranse = GetSettings(nameof(PermanentTranse));
+            public static readonly string MaxDamage = GetSettings(nameof(MaxDamage));
+            public static readonly string NoRandomBattles = GetSettings(nameof(NoRandomBattles));
+            public static readonly string PermanentCheats = GetSettings(nameof(PermanentCheats));
+            public static readonly string UsePsxFont = GetSettings(nameof(UsePsxFont));
+            public static readonly string FontChoice = GetSettings(nameof(FontChoice));
+            public static readonly string SBUIenabled = GetSettings(nameof(SBUIenabled));
+            public static readonly string BattleFPS = GetSettings(nameof(BattleFPS));
+
         }
 
         public static class SdLib
@@ -157,6 +184,19 @@ namespace Memoria.Launcher
             public static readonly String Fail = GetSdLib(nameof(Fail));
             public static readonly String CannotRead = GetSdLib(nameof(CannotRead));
             public static readonly String CannotWrite = GetSdLib(nameof(CannotWrite));
+        }
+        
+        public static class SteamOverlay
+        {
+            private static String GetSteamOverlay(string name)
+            {
+                return Instance.Value.GetString(name, nameof(SteamOverlay));
+            }
+
+            public static readonly String OptionLabel = GetSteamOverlay(nameof(OptionLabel));
+            public static readonly String Caption = GetSteamOverlay(nameof(Caption));
+            public static readonly String FixAreYouSure = GetSteamOverlay(nameof(FixAreYouSure));
+            public static readonly String RollbackAreYouSure = GetSteamOverlay(nameof(RollbackAreYouSure));
         }
 
         public static class Button

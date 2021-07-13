@@ -23,7 +23,7 @@ namespace Memoria.Scripts.Battle
                 return;
 
             _v.Caster.Flags = CalcFlag.MpAlteration | CalcFlag.MpRecovery;
-            _v.Caster.MpDamage = (Int16)(GameRandom.Next16() % (_v.Target.Level * 2));
+            _v.Caster.MpDamage = GameRandom.Next16() % (_v.Target.Level * 2);
 
             foreach (BattleUnit unit in BattleState.EnumerateUnits())
             {
@@ -34,6 +34,8 @@ namespace Memoria.Scripts.Battle
                 SBattleCalculator.CalcResult(_v);
                 BattleState.Unit2DReq(unit);
             }
+            _v.Caster.Flags = 0;
+            _v.Caster.MpDamage = 0;
         }
     }
 }

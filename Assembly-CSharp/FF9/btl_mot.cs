@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Memoria;
 using Memoria.Data;
 using UnityEngine;
@@ -10,6 +10,41 @@ namespace FF9
 		static btl_mot()
 		{
 			// Note: this type is marked as 'beforefieldinit'.
+			// Battle motion IDs for player characters are sorted like these:
+			//  0:  stand (MP_IDLE_NORMAL),
+			//  1:  low HP (MP_IDLE_DYING),
+			//  2:  hitted (MP_DAMAGE1),
+			//  3:  hitted strongly (MP_DAMAGE2),
+			//  4:  KO (MP_DISABLE),
+			//  5:  low HP -> stand (MP_GET_UP_DYING),
+			//  6:  KO -> stand (MP_GET_UP_DISABLE),
+			//  7:  hit hard (MP_DOWN_DYING),
+			//  8:  stand -> KO (MP_DOWN_DISABLE),
+			//  9:  ready (MP_IDLE_CMD),
+			//  10: stand -> ready (MP_NORMAL_TO_CMD),
+			//  11: KO -> low HP (MP_DYING_TO_CMD),
+			//  12: stand -> defend (MP_IDLE_TO_DEF),
+			//  13: defend (MP_DEFENCE),
+			//  14: defend -> stand (MP_DEF_TO_IDLE),
+			//  15: cover (MP_COVER),
+			//  16: dodge (MP_AVOID),
+			//  17: flee (MP_ESCAPE),
+			//  18: victory (MP_WIN),
+			//  19: stand victory (MP_WIN_LOOP),
+			//  20: stand -> run (MP_SET),
+			//  21: run (MP_RUN),
+			//  22: run -> attack (MP_RUN_TO_ATTACK),
+			//  23: attack (MP_ATTACK),
+			//  24: jump back (MP_BACK),
+			//  25: jump back -> stand (MP_ATK_TO_NORMAL),
+			//  26: stand -> cast (MP_IDLE_TO_CHANT),
+			//  27: cast (MP_CHANT),
+			//  28: cast -> stand (MP_MAGIC),
+			//  29: move forward (MP_STEP_FORWARD),
+			//  30: move backward (MP_STEP_BACK),
+			//  31: item (MP_ITEM1),
+			//  32: ready -> stand (MP_CMD_TO_NORMAL),
+			//  33: cast alternate (MP_SPECIAL1)
 			String[,] array = new String[19, 34];
 			array[0, 0] = "ANH_MAIN_B0_000_000";
 			array[0, 1] = "ANH_MAIN_B0_000_022";
@@ -663,11 +698,29 @@ namespace FF9
 	    public static void setMotion(BattleUnit btl, Byte index)
         {
             btl.Data.currentAnimationName = btl.Data.mot[(Int32)index];
-        }
+		}
 
         public static void setMotion(BTL_DATA btl, Byte index)
 		{
 			btl.currentAnimationName = btl.mot[(Int32)index];
+		}
+
+		public static void setMotion(BTL_DATA btl, BattlePlayerCharacter.PlayerMotionIndex index)
+		{
+			btl.currentAnimationName = btl.mot[(Int32)index];
+		}
+
+		public static Byte getMotion(BattleUnit btl)
+		{
+			return getMotion(btl.Data);
+		}
+
+        public static Byte getMotion(BTL_DATA btl)
+		{
+			for (Int32 i = 0; i < btl.mot.Length; i++)
+				if (btl.currentAnimationName == btl.mot[i])
+					return (Byte)i;
+			return Byte.MaxValue;
 		}
 
 		public static void setMotion(BTL_DATA btl, String name)
@@ -676,6 +729,16 @@ namespace FF9
 		}
 
 		public static Boolean checkMotion(BTL_DATA btl, Byte index)
+		{
+			if ((Int32)index > (Int32)btl.mot.Length)
+			{
+				return false;
+			}
+			String b = btl.mot[(Int32)index];
+			return btl.currentAnimationName == b;
+		}
+
+		public static Boolean checkMotion(BTL_DATA btl, BattlePlayerCharacter.PlayerMotionIndex index)
 		{
 			if ((Int32)index > (Int32)btl.mot.Length)
 			{
@@ -699,31 +762,37 @@ namespace FF9
 			{
 				if (gameObject.GetComponent<Animation>().GetClip(currentAnimationName) != (UnityEngine.Object)null)
 				{
+					AnimationState clipState = gameObject.GetComponent<Animation>()[currentAnimationName];
 					gameObject.GetComponent<Animation>().Play(currentAnimationName);
-					gameObject.GetComponent<Animation>()[currentAnimationName].speed = 0f;
-					Single time = (Single)animFrame / (Single)num * gameObject.GetComponent<Animation>()[currentAnimationName].length;
-					gameObject.GetComponent<Animation>()[currentAnimationName].time = time;
+					clipState.speed = 0f;
+					if (num == 0)
+						clipState.time = 0f;
+					else
+						clipState.time = (Single)animFrame / (Single)num * gameObject.GetComponent<Animation>()[currentAnimationName].length;
 					gameObject.GetComponent<Animation>().Sample();
 				}
 			}
 			else
 			{
-				gameObject.GetComponent<Animation>()[currentAnimationName].speed = 0f;
-				Single time2 = (Single)animFrame / (Single)num * gameObject.GetComponent<Animation>()[currentAnimationName].length;
-				gameObject.GetComponent<Animation>()[currentAnimationName].time = time2;
+				AnimationState clipState = gameObject.GetComponent<Animation>()[currentAnimationName];
+				clipState.speed = 0f;
+				if (num == 0)
+					clipState.time = 0f;
+				else
+					clipState.time = (Single)animFrame / (Single)num * gameObject.GetComponent<Animation>()[currentAnimationName].length;
 				gameObject.GetComponent<Animation>().Sample();
 			}
 		}
 
 		public static Int32 GetDirection(BTL_DATA btl)
 		{
-			return btl.bi.player == 0 ? 0 : 180;
+			return (Int32)btl.evt.rotBattle.eulerAngles[1];
 		}
 
 	    public static Int32 GetDirection(BattleUnit btl)
 	    {
-	        return btl.IsPlayer ? 180 : 0;
-	    }
+			return (Int32)btl.Data.evt.rotBattle.eulerAngles[1];
+		}
 
 	    public static void setSlavePos(BTL_DATA btl, ref Vector3 pos)
 		{
@@ -823,22 +892,24 @@ namespace FF9
 					switch (btl.die_seq)
 					{
 					case 1:
-						if (btl_mot.checkMotion(btl, 9))
+						if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_CMD))
 						{
-							btl_mot.setMotion(btl, 32);
+							btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_CMD_TO_NORMAL);
 							btl.evt.animFrame = 0;
 						}
-						else if (!btl_mot.checkMotion(btl, 32) || (UInt16)btl.evt.animFrame >= GeoAnim.geoAnimGetNumFrames(btl))
+						else if (!btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_CMD_TO_NORMAL) || (UInt16)btl.evt.animFrame >= GeoAnim.geoAnimGetNumFrames(btl))
 						{
 							btl.die_seq = 2;
 							if (btl.bi.def_idle == 1)
 							{
-								btl_mot.setMotion(btl, 8);
+								btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DOWN_DISABLE);
 								btl.die_seq = 4;
+								if (btl.is_monster_transform)
+									btl_util.SetBattleSfx(btl, btl.monster_transform.death_sound, 127);
 							}
 							else
 							{
-								btl_mot.setMotion(btl, 7);
+								btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DOWN_DYING);
 								btl.die_seq = 3;
 							}
 							btl.evt.animFrame = 0;
@@ -847,12 +918,14 @@ namespace FF9
 					case 2:
 						if (btl.bi.def_idle == 1)
 						{
-							btl_mot.setMotion(btl, 8);
+							btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DOWN_DISABLE);
 							btl.die_seq = 4;
+							if (btl.is_monster_transform)
+								btl_util.SetBattleSfx(btl, btl.monster_transform.death_sound, 127);
 						}
 						else
 						{
-							btl_mot.setMotion(btl, 7);
+							btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DOWN_DYING);
 							btl.die_seq = 3;
 						}
 						btl.evt.animFrame = 0;
@@ -860,8 +933,10 @@ namespace FF9
 					case 3:
 						if ((UInt16)btl.evt.animFrame >= GeoAnim.geoAnimGetNumFrames(btl))
 						{
-							btl_mot.setMotion(btl, 8);
+							btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DOWN_DISABLE);
 							btl.evt.animFrame = 0;
+							if (btl.is_monster_transform)
+								btl_util.SetBattleSfx(btl, btl.monster_transform.death_sound, 127);
 							btl.die_seq = (Byte)(btl.die_seq + 1);
 						}
 						break;
@@ -887,7 +962,9 @@ namespace FF9
 
 		public static Boolean DecidePlayerDieSequence(BTL_DATA btl)
 		{
-			btl_mot.setMotion(btl, 4);
+			if (btl.is_monster_transform && btl.monster_transform.cancel_on_death)
+				new BattleUnit(btl).ReleaseChangeToMonster();
+			btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DISABLE);
 			GeoTexAnim.geoTexAnimStop(btl.texanimptr, 2);
 			GeoTexAnim.geoTexAnimPlayOnce(btl.texanimptr, 0);
 			if (btl.bi.player != 0)
@@ -914,7 +991,7 @@ namespace FF9
 			CMD_DATA cur_cmd = ff9Battle.cur_cmd;
 			if (Status.checkCurStat(btl, BattleStatus.Death))
 			{
-				if (btl.bi.player != 0 && btl.bi.dmg_mot_f == 0 && cur_cmd != null && btl != cur_cmd.regist && btl.die_seq == 0 && !btl_mot.checkMotion(btl, 4) && !btl_mot.checkMotion(btl, 9))
+				if (btl.bi.player != 0 && btl.bi.dmg_mot_f == 0 && cur_cmd != null && btl != cur_cmd.regist && btl.die_seq == 0 && !btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DISABLE) && !btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_CMD))
 				{
 					btl_mot.setMotion(btl, btl.bi.def_idle);
 				}
@@ -926,9 +1003,9 @@ namespace FF9
 			}
 			if (cur_cmd != null && btl == cur_cmd.regist && (cur_cmd.cmd_no < BattleCommandId.EnemyReaction || cur_cmd.cmd_no > BattleCommandId.SysReraise))
 			{
-				if (btl_mot.checkMotion(btl, 10) || btl_mot.checkMotion(btl, 11))
+				if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_NORMAL_TO_CMD) || btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DYING_TO_CMD))
 				{
-					btl_mot.setMotion(btl, 9);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_CMD);
 				}
 				return false;
 			}
@@ -938,11 +1015,11 @@ namespace FF9
 				{
 					if ((ff9Battle.btl_escape_key != 0 || (ff9Battle.cmd_status & 1) != 0) && !Status.checkCurStat(btl, BattleStatus.CannotEscape))
 					{
-						btl_mot.setMotion(btl, 17);
+						btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_ESCAPE);
 					}
 					else if (Status.checkCurStat(btl, BattleStatus.Defend))
 					{
-						btl_mot.setMotion(btl, 13);
+						btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DEFENCE);
 					}
 					else if (btl.bi.cmd_idle != 0)
 					{
@@ -952,17 +1029,17 @@ namespace FF9
 						}
 						else
 						{
-							btl_mot.setMotion(btl, 9);
+							btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_CMD);
 						}
 					}
-					else if (btl_mot.checkMotion(btl, 0) && Status.checkCurStat(btl, BattleStatus.IdleDying))
+					else if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_NORMAL) && Status.checkCurStat(btl, BattleStatus.IdleDying))
 					{
 						global::Debug.LogWarning(btl.gameObject.name + " Dead");
-						btl_mot.setMotion(btl, 7);
+						btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DOWN_DYING);
 					}
-					else if ((btl_mot.checkMotion(btl, 1) || btl_mot.checkMotion(btl, 6)) && !Status.checkCurStat(btl, BattleStatus.IdleDying))
+					else if ((btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_IDLE_DYING) || btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_GET_UP_DISABLE)) && !btl_stat.CheckStatus(btl, BattleStatus.IdleDying))
 					{
-						btl_mot.setMotion(btl, 5);
+						btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_GET_UP_DYING);
 					}
 					else
 					{
@@ -981,18 +1058,18 @@ namespace FF9
 		public static void SetDamageMotion(BattleUnit btl)
 		{
 			if ((btl.Data.fig_info & 4) != 0)
-			    btl.Data.pos[2] += (btl.Data.evt.rot[1] == 0 ? 400 : -400) >> 1;
+			    btl.Data.pos[2] += (((btl.Data.rot.eulerAngles[1] + 90) % 360) < 180 ? 400 : -400) >> 1;
 
             if (btl.IsPlayer)
 			{
-				if ((btl_util.getCurCmdPtr().aa.Type & 129) == 129)
-					btl_mot.setMotion(btl, 3);
+				if ((btl_util.getCurCmdPtr().AbilityType & 129) == 129)
+					btl_mot.setMotion(btl.Data, BattlePlayerCharacter.PlayerMotionIndex.MP_DAMAGE2);
 				else
-					btl_mot.setMotion(btl, 2);
+					btl_mot.setMotion(btl.Data, BattlePlayerCharacter.PlayerMotionIndex.MP_DAMAGE1);
 			}
-			else if (btl.CurrentHp == 0 && btl.Enemy.Data.info.die_dmg != 0)
+			else if (btl.Data.cur.hp == 0 && btl.Enemy.Data.info.die_dmg != 0)
 			{
-				btl_mot.setMotion(btl, 3);
+				btl_mot.setMotion(btl.Data, BattlePlayerCharacter.PlayerMotionIndex.MP_DAMAGE2);
 				btl_util.SetEnemyDieSound(btl.Data, btl.EnemyType.die_snd_no);
 			}
 			else
@@ -1038,7 +1115,7 @@ namespace FF9
 
 		private static void PlayerDamageMotion(BTL_DATA btl)
 		{
-			if (btl_mot.checkMotion(btl, 2))
+			if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DAMAGE1))
 			{
 				if (Status.checkCurStat(btl, BattleStatus.Death))
 				{
@@ -1047,39 +1124,39 @@ namespace FF9
 				}
 				else if (btl.bi.cmd_idle != 0)
 				{
-					btl_mot.setMotion(btl, 10);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_NORMAL_TO_CMD);
 				}
 				else
 				{
 					btl.bi.dmg_mot_f = 0;
 				}
 			}
-			else if (btl_mot.checkMotion(btl, 3))
+			else if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DAMAGE2))
 			{
 				if (Status.checkCurStat(btl, BattleStatus.Death))
 				{
 					btl.die_seq = 5;
 					btl.bi.dmg_mot_f = 0;
-					btl_mot.setMotion(btl, 4);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DISABLE);
 				}
 				else
 				{
-					btl_mot.setMotion(btl, 6);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_GET_UP_DISABLE);
 				}
 			}
-			else if (btl_mot.checkMotion(btl, 6))
+			else if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_GET_UP_DISABLE))
 			{
 				if (btl.bi.cmd_idle != 0)
 				{
-					btl_mot.setMotion(btl, 11);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DYING_TO_CMD);
 				}
-				else if (Status.checkCurStat(btl, BattleStatus.IdleDying))
+				else if (btl_stat.CheckStatus(btl, BattleStatus.IdleDying))
 				{
 					btl.bi.dmg_mot_f = 0;
 				}
 				else
 				{
-					btl_mot.setMotion(btl, 5);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_GET_UP_DYING);
 				}
 			}
 			else
@@ -1094,9 +1171,9 @@ namespace FF9
 			btl.bi.dmg_mot_f = 0;
 			if (Status.checkCurStat(btl, BattleStatus.Death))
 			{
-				if (btl_mot.checkMotion(btl, 3) && btl_util.getEnemyPtr(btl).info.die_dmg != 0)
+				if (btl_mot.checkMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DAMAGE2) && btl_util.getEnemyPtr(btl).info.die_dmg != 0)
 				{
-					btl_mot.setMotion(btl, 4);
+					btl_mot.setMotion(btl, BattlePlayerCharacter.PlayerMotionIndex.MP_DISABLE);
 					PosObj evt = btl.evt;
 					evt.animFrame = (Byte)(evt.animFrame - 1);
 					btl.bi.stop_anim = 1;
@@ -1185,9 +1262,7 @@ namespace FF9
 		{
 			FF9StateBattleSystem ff9Battle = FF9StateSystem.Battle.FF9Battle;
 			for (UInt32 num = 0u; num < 34u; num += 1u)
-			{
 				ff9Battle.p_mot[(Int32)((UIntPtr)cnt)][(Int32)((UIntPtr)num)] = btl_mot.mot[(Int32)((UIntPtr)serial_no), (Int32)((UIntPtr)num)];
-			}
 			btl.mot = ff9Battle.p_mot[(Int32)((UIntPtr)cnt)];
 		}
 

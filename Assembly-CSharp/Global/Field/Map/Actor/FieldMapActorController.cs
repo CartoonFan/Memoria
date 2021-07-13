@@ -625,6 +625,11 @@ public class FieldMapActorController : HonoBehavior
 				this.ApplyNeckRotation(childByName, num4, rotY);
 			}
 		}
+		// TODO Check Native: #147
+		else if (this.actor.actor.anim == 4630 || this.actor.actor.anim == 12938 || this.actor.actor.anim == 4636)
+		{
+			childByName.rotation = Quaternion.Euler(-20f, 0f, 0f) * childByName.rotation;
+		}
 		else
 		{
 			this.ApplyNeckRotation(childByName, num4, rotY);
@@ -688,10 +693,10 @@ public class FieldMapActorController : HonoBehavior
 	        vector = PersistenSingleton<HonoInputManager>.Instance.GetAxis();
         }
 
-	    Boolean flag2 = UIManager.Input.GetKey(Control.Up) || vector.y > 0f;
-        Boolean flag3 = UIManager.Input.GetKey(Control.Down) || vector.y < 0f;
-        Boolean flag4 = UIManager.Input.GetKey(Control.Left) || vector.x < 0f;
-        Boolean flag5 = UIManager.Input.GetKey(Control.Right) || vector.x > 0f;
+	    Boolean flag2 = UIManager.Input.GetKey(Control.Up) || vector.y > 0.1f;
+        Boolean flag3 = UIManager.Input.GetKey(Control.Down) || vector.y < -0.1f;
+        Boolean flag4 = UIManager.Input.GetKey(Control.Left) || vector.x < -0.1f;
+        Boolean flag5 = UIManager.Input.GetKey(Control.Right) || vector.x > 0.1f;
         if (!FF9StateSystem.Field.isDebug)
 		{
 			flag2 &= PersistenSingleton<EventEngine>.Instance.GetUserControl();
@@ -784,7 +789,7 @@ public class FieldMapActorController : HonoBehavior
                 this.moveVec.Normalize();
             }
             Single y = FF9StateSystem.Field.twist.y;
-			if (flag)
+			if (analogControlEnabled && Configuration.AnalogControl.UseAbsoluteOrientation)
 			{
 				y = FF9StateSystem.Field.twist.x;
 			}
@@ -2506,10 +2511,11 @@ public class FieldMapActorController : HonoBehavior
 		{
 			if (this.questionMark == (UnityEngine.Object)null)
 			{
-				this.questionMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/balloon_question", false);
-				this.exclamationMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/balloon_exclamation", false);
-				this.targetMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/cursor_hand_here", false);
-				this.warpMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/cursor_warp", false);
+				String[] pngInfo;
+				this.questionMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/balloon_question", out pngInfo, false);
+				this.exclamationMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/balloon_exclamation", out pngInfo, false);
+				this.targetMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/cursor_hand_here", out pngInfo, false);
+				this.warpMark = AssetManager.Load<Texture2D>("CommonAsset/EventIcons/cursor_warp", out pngInfo, false);
 			}
 			this.targetMarkSize = (Single)Screen.height * 0.1f;
 			GameObject gameObject = GameObject.Find("NPC mog");

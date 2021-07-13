@@ -16,8 +16,9 @@ public class BattleState : MonoBehaviour
 	private void InitMapName()
 	{
 		this.mapName = new Dictionary<Int32, String>();
-		TextAsset textAsset = AssetManager.Load<TextAsset>("EmbeddedAsset/Manifest/BattleMap/BattleMapList.txt", false);
-		StringReader stringReader = new StringReader(textAsset.text);
+		String[] bmapInfo;
+		String textAsset = AssetManager.LoadString("EmbeddedAsset/Manifest/BattleMap/BattleMapList.txt", out bmapInfo, false);
+		StringReader stringReader = new StringReader(textAsset);
 		String text;
 		while ((text = stringReader.ReadLine()) != null)
 		{
@@ -39,7 +40,7 @@ public class BattleState : MonoBehaviour
 	{
 		this.battleMapIndex = 0;
 		this.isFrontRow = false;
-		this.debugStartType = 2;
+		this.debugStartType = battle_start_type_tags.BTL_START_NORMAL_ATTACK;
 		this.isLevitate = false;
 		this.isTrance = new Boolean[4];
 		for (Int32 i = 0; i < (Int32)this.isTrance.Length; i++)
@@ -51,16 +52,18 @@ public class BattleState : MonoBehaviour
 		this.selectPlayerCount = 4;
 		this.isDebug = false;
 		this.isRandomEncounter = false;
+		this.isEncount = false;
 		this.isTutorial = false;
 		battle.isAlreadyShowTutorial = false;
 		this.FF9Battle = new FF9StateBattleSystem();
-		this.FF9Battle.status_data = FF9BattleDB.status_data;
+		this.FF9Battle.status_data = FF9BattleDB.StatusData;
 		this.FF9Battle.aa_data = FF9BattleDB.CharacterActions;
 		this.FF9Battle.add_status = FF9BattleDB.StatusSets;
 		this.fadeShader = ShadersLoader.Find("PSX/BattleMap_Abr_1");
 		this.battleShader = ShadersLoader.Find("PSX/BattleMap_StatusEffect");
 		this.shadowShader = ShadersLoader.Find("PSX/BattleMap_Abr_2");
-		this.detailTexture = Resources.Load<Texture2D>("EmbeddedAsset/BattleMap/detailTexture");
+		String[] pngInfo;
+		this.detailTexture = AssetManager.Load<Texture2D>("EmbeddedAsset/BattleMap/detailTexture", out pngInfo, false);
 	}
 
 	public Boolean isNoBoosterMap()
@@ -76,7 +79,7 @@ public class BattleState : MonoBehaviour
 
 	public Boolean isFrontRow;
 
-	public Byte debugStartType;
+	public battle_start_type_tags debugStartType;
 
 	public Boolean isLevitate;
 
@@ -107,4 +110,6 @@ public class BattleState : MonoBehaviour
 	public FF9StateBattleSystem FF9Battle;
 
 	public Boolean IsPlayFieldBGMInCurrentBattle;
+	
+	public bool isEncount;
 }

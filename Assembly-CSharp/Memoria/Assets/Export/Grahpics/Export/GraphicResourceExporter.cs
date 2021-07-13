@@ -20,7 +20,7 @@ namespace Memoria.Assets
 
                 foreach (String name in EnumerateAtlases())
                 {
-                    String path = GraphicResources.Embaded.GetAtlasPath(name);
+                    String path = GraphicResources.Embedded.GetAtlasPath(name);
                     UIAtlas atlas = Resources.Load(path, typeof(UIAtlas)) as UIAtlas;
                     if (atlas != null)
                     {
@@ -61,6 +61,21 @@ namespace Memoria.Assets
                     Texture2D fragment = TextureHelper.GetFragment(texture, sprite.x, texture.height - sprite.y - sprite.height, sprite.width, sprite.height);
                     TextureHelper.WriteTextureToFile(fragment, Path.Combine(outputDirectory, sprite.name + ".png"));
                 }
+
+                String outputPathTPSheet = outputDirectory + ".tpsheet";
+                String tpsheetText = ":format=40000\n"
+                //  + ":texture=" + texture.name + "\n"
+                //  + ":normalmap=\n";
+                    + ":size=" + texture.width + "x" + texture.height + "\n";
+                foreach (UISpriteData sprite in atlas.spriteList)
+                {
+                    tpsheetText += sprite.name + ";" + sprite.x + ";" + sprite.y + ";" + sprite.width + ";" + sprite.height;
+                    tpsheetText += ";0;0"; // pivotX & pivotY, unused
+                    tpsheetText += ";" + sprite.paddingLeft + ";" + sprite.paddingRight + ";" + sprite.paddingTop + ";" + sprite.paddingBottom;
+                    tpsheetText += ";" + sprite.borderBottom + ";" + sprite.borderRight + ";" + sprite.borderTop + ";" + sprite.borderBottom;
+                    tpsheetText += "\n";
+                }
+                File.WriteAllText(outputPathTPSheet, tpsheetText);
             }
             catch (Exception ex)
             {

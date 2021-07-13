@@ -13,8 +13,7 @@ public class FieldMapUIButton : MonoBehaviour
 		this.bg = GameObject.Find("FieldMap").GetComponent<FieldMap>();
 		this._sceneList = new List<FieldMapUIButton.SceneDef>();
 		String name = "EmbeddedAsset/Manifest/FieldMap/mapList.txt";
-		TextAsset textAsset = AssetManager.Load<TextAsset>(name, false);
-		String text = textAsset.text;
+		String text = AssetManager.LoadString(name, out _, false);
 		String[] array = text.Split(new Char[]
 		{
 			"\n"[0]
@@ -204,7 +203,7 @@ public class FieldMapUIButton : MonoBehaviour
 				}
 				FF9StateSystem.Field.SceneName = this._sceneList[this.index].name;
 				FF9StateSystem.Field.index = this.index;
-				SoundLib.StopAllSounds();
+				SoundLib.StopAllSounds(true);
 				SceneDirector.Replace("FieldMapDebug", SceneTransition.FadeOutToBlack_FadeIn, true);
 			}
 		}

@@ -386,6 +386,11 @@ public class JsonParser : ISharedDataParser
 		{
 			FF9StateSystem.Achievement.summon_arc = jsonnode["98000_Achievement"]["000017_summon_arc"].AsBool;
 		}
+		for (Int32 i = 0; i < 9; i++)
+		{
+			// Run "FF9Play_Update" anyway when loading data, mostly for "SupportingAbilityFeature.TriggerOnEnable"
+			ff9play.FF9Play_Update(FF9StateSystem.Common.FF9.player[i]);
+		}
 	}
 
 	private UInt16 getExtraCap(PLAYER player)
@@ -839,11 +844,11 @@ public class JsonParser : ISharedDataParser
 			{
 				{
 					"hp",
-					player2.cur.hp.ToString()
+					((UInt16)player2.cur.hp).ToString() // In order to avoid saves to change format, we keep 16-bit datas instead of 32-bits
 				},
 				{
 					"mp",
-					player2.cur.mp.ToString()
+					((Int16)player2.cur.mp).ToString()
 				},
 				{
 					"at",
@@ -862,11 +867,11 @@ public class JsonParser : ISharedDataParser
 			{
 				{
 					"hp",
-					player2.max.hp.ToString()
+					((UInt16)player2.max.hp).ToString() // In order to avoid saves to change format, we keep 16-bit datas instead of 32-bits
 				},
 				{
 					"mp",
-					player2.max.mp.ToString()
+					((Int16)player2.max.mp).ToString()
 				},
 				{
 					"at",
@@ -925,11 +930,11 @@ public class JsonParser : ISharedDataParser
 			{
 				{
 					"max_hp",
-					player2.basis.max_hp.ToString()
+					((Int16)player2.basis.max_hp).ToString() // In order to avoid saves to change format, we keep 16-bit datas instead of 32-bits
 				},
 				{
 					"max_mp",
-					player2.basis.max_mp.ToString()
+					((Int16)player2.basis.max_mp).ToString()
 				},
 				{
 					"dex",
@@ -1093,11 +1098,11 @@ public class JsonParser : ISharedDataParser
 			{
 				{
 					"hp",
-					player3.cur.hp.GetType().ToString()
+					typeof(UInt16).ToString() // In order to avoid saves to change format, we keep 16-bit datas instead of 32-bits
 				},
 				{
 					"mp",
-					player3.cur.mp.GetType().ToString()
+					typeof(Int16).ToString()
 				},
 				{
 					"at",
@@ -1116,11 +1121,11 @@ public class JsonParser : ISharedDataParser
 			{
 				{
 					"hp",
-					player3.max.hp.GetType().ToString()
+					typeof(UInt16).ToString() // In order to avoid saves to change format, we keep 16-bit datas instead of 32-bits
 				},
 				{
 					"mp",
-					player3.max.mp.GetType().ToString()
+					typeof(Int16).ToString()
 				},
 				{
 					"at",
@@ -1179,11 +1184,11 @@ public class JsonParser : ISharedDataParser
 			{
 				{
 					"max_hp",
-					player3.basis.max_hp.GetType().ToString()
+					typeof(Int16).ToString() // In order to avoid saves to change format, we keep 16-bit datas instead of 32-bits
 				},
 				{
 					"max_mp",
-					player3.basis.max_mp.GetType().ToString()
+					typeof(Int16).ToString()
 				},
 				{
 					"dex",
@@ -1339,11 +1344,11 @@ public class JsonParser : ISharedDataParser
 				JSONClass asObject2 = asObject["cur"].AsObject;
 				if (asObject2["hp"] != null)
 				{
-					player.cur.hp = (UInt16)asObject2["hp"].AsInt;
+					player.cur.hp = (UInt32)asObject2["hp"].AsInt;
 				}
 				if (asObject2["mp"] != null)
 				{
-					player.cur.mp = (Int16)asObject2["mp"].AsInt;
+					player.cur.mp = (UInt32)asObject2["mp"].AsInt;
 				}
 				if (asObject2["at"] != null)
 				{
@@ -1360,11 +1365,11 @@ public class JsonParser : ISharedDataParser
 				JSONClass asObject3 = asObject["max"].AsObject;
 				if (asObject3["hp"] != null)
 				{
-					player.max.hp = (UInt16)asObject3["hp"].AsInt;
+					player.max.hp = (UInt32)asObject3["hp"].AsInt;
 				}
 				if (asObject3["mp"] != null)
 				{
-					player.max.mp = (Int16)asObject3["mp"].AsInt;
+					player.max.mp = (UInt32)asObject3["mp"].AsInt;
 				}
 				if (asObject3["at"] != null)
 				{
@@ -1423,11 +1428,11 @@ public class JsonParser : ISharedDataParser
 				JSONClass asObject6 = asObject["basis"].AsObject;
 				if (asObject6["max_hp"] != null)
 				{
-					player.basis.max_hp = (Int16)asObject6["max_hp"].AsInt;
+					player.basis.max_hp = (UInt32)asObject6["max_hp"].AsInt;
 				}
 				if (asObject6["max_mp"] != null)
 				{
-					player.basis.max_mp = (Int16)asObject6["max_mp"].AsInt;
+					player.basis.max_mp = (UInt32)asObject6["max_mp"].AsInt;
 				}
 				if (asObject6["dex"] != null)
 				{

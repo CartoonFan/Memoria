@@ -13,53 +13,97 @@ public class UIAtlas : MonoBehaviour
 {
     public UIAtlas()
     {
-        if (Configuration.Import.Enabled && Configuration.Import.Graphics)
-            GameLoopManager.Start += OverrideAtlas;
-    }
+		GameLoopManager.Start += OverrideAtlas;
+	}
 
-    private void OverrideAtlas()
-    {
-        GameLoopManager.Start -= OverrideAtlas;
+	private void OverrideAtlas()
+	{
+		GameLoopManager.Start -= OverrideAtlas;
+		if (Configuration.Import.Enabled && Configuration.Import.Graphics)
+		{
+			ReadFromDisc(GraphicResources.Import.GetAtlasPath(name));
+		}
+		else if (GraphicResources.AtlasList.ContainsKey(name))
+		{
+			String[] modPath = Configuration.Mod.FolderNames;
+			String atlasFilePath = GraphicResources.AtlasList[name];
+			for (Int32 i = 0; i < modPath.Length; i++)
+				if (File.Exists(modPath[i] + "/" + AssetManagerUtil.GetResourcesAssetsPath(true) + "/" + atlasFilePath) || File.Exists(modPath[i] + "/" + AssetManagerUtil.GetResourcesAssetsPath(true) + "/" + atlasFilePath + ".tpsheet"))
+				{
+					ReadFromDisc(modPath[i] + "/" + AssetManagerUtil.GetResourcesAssetsPath(true) + "/" + atlasFilePath);
+					return;
+				}
+		}
+	}
 
-        try
-        {
-            String inputPath = GraphicResources.Import.GetAtlasPath(name);
-            String tpsheetPath = inputPath + ".tpsheet";
+	public Boolean ReadFromDisc(String inputPath)
+	{
+		try
+		{
+			if (!File.Exists(inputPath))
+				return false;
 
-            if (!File.Exists(tpsheetPath))
-                return;
+			Byte[] raw = File.ReadAllBytes(inputPath);
+			Texture2D newFullAtlas = AssetManager.LoadTextureGeneric(raw);
+			if (newFullAtlas == null)
+				newFullAtlas = new Texture2D(1, 1, AssetManager.DefaultTextureFormat, false);
+			SetTexture(newFullAtlas);
 
-            TPSpriteSheetLoader loader = new TPSpriteSheetLoader(tpsheetPath);
-            SpriteSheet spriteSheet = loader.Load();
+			String tpsheetPath = inputPath + ".tpsheet";
+			if (!File.Exists(tpsheetPath))
+				return true;
 
-            Dictionary<String, UISpriteData> original = mSprites.ToDictionary(s => s.name);
-            Dictionary<String, UnityEngine.Sprite> external = spriteSheet.sheet.ToDictionary(s => s.name);
-            if (original.Count != external.Count)
-            {
-                Log.Warning("[UIAtlas] Invalid sprite number: {0}, expected: {1}", external.Count, original.Count);
-                return;
-            }
+			TPSpriteSheetLoader loader = new TPSpriteSheetLoader(tpsheetPath);
+			SpriteSheet external = loader.Load(newFullAtlas);
+			Dictionary<String, UISpriteData> original = mSprites.ToDictionary(s => s.name);
 
-            Texture2D newTexture = spriteSheet.sheet[0].texture;
-            foreach (KeyValuePair<String, UISpriteData> pair in original)
-            {
-                UISpriteData target = pair.Value;
-                UnityEngine.Sprite source = external[pair.Key];
+			// Combine original and external (with external updating existing sprites)
+			for (Int32 i = 0; i < external.sheet.Length; i++)
+			{
+				UISpriteData uispriteData = new UISpriteData();
+				UnityEngine.Sprite extSprite = external.sheet[i];
+				SpriteSheet.Info extInfo = external.info?[i];
+				uispriteData.name = extSprite.name;
+				uispriteData.x = (Int32)extSprite.rect.x;
+				uispriteData.y = (Int32)extSprite.rect.y;
+				uispriteData.width = (Int32)extSprite.rect.width;
+				uispriteData.height = (Int32)extSprite.rect.height;
+				if (extInfo != null)
+				{
+					uispriteData.paddingLeft = (Int32)extInfo.padding[0];
+					uispriteData.paddingRight = (Int32)extInfo.padding[1];
+					uispriteData.paddingTop = (Int32)extInfo.padding[2];
+					uispriteData.paddingBottom = (Int32)extInfo.padding[3];
+					uispriteData.borderLeft = (Int32)extInfo.border[0];
+					uispriteData.borderRight = (Int32)extInfo.border[1];
+					uispriteData.borderTop = (Int32)extInfo.border[2];
+					uispriteData.borderBottom = (Int32)extInfo.border[3];
+				}
+				else
+				{
+					uispriteData.paddingLeft = 0;
+					uispriteData.paddingRight = 0;
+					uispriteData.paddingTop = 0;
+					uispriteData.paddingBottom = 0;
+					uispriteData.borderLeft = 0;
+					uispriteData.borderRight = 0;
+					uispriteData.borderTop = 0;
+					uispriteData.borderBottom = 0;
+				}
+				original[extSprite.name] = uispriteData;
+			}
+			mSprites = original.Values.ToList();
 
-                target.x = (Int32)source.rect.x;
-                target.y = (Int32)(newTexture.height - source.rect.height - source.rect.y);
-                target.width = (Int32)source.rect.width;
-                target.height = (Int32)source.rect.height;
-            }
-
-            mReplacement = null;
-            SetTexture(newTexture);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "[UIAtlas] Faield to oveeride atlas.");
-        }
-    }
+			mReplacement = null;
+			SetTexture(newFullAtlas);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Log.Error(ex, "[UIAtlas] Failed to overide atlas.");
+			return false;
+		}
+	}
 
     private void SetTexture(Texture newTexture)
     {

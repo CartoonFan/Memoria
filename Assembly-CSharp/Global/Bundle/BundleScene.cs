@@ -40,6 +40,7 @@ public class BundleScene : MonoBehaviour
 		}
 		this._skipBundleScene = true;
 		ExpansionVerifier.printLog("BundleScene : awake _skipBundleScene = " + this._skipBundleScene);
+		this._UsingUncompressedAssetBundlesFromLocal();
 	}
 
 	private void LateUpdate()
@@ -187,15 +188,15 @@ public class BundleScene : MonoBehaviour
 		AssetManager.UseBundles = true;
 		if (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor)
 		{
-			this._baseUrl = "file://" + AssetManagerUtil.GetStreamingAssetsPath() + "/";
+			this._baseUrl = "file://";
 		}
 		else if (Application.platform == RuntimePlatform.IPhonePlayer)
 		{
-			this._baseUrl = "file://" + AssetManagerUtil.GetStreamingAssetsPath() + "/";
+			this._baseUrl = "file://";
 		}
 		else if (Application.platform == RuntimePlatform.Android)
 		{
-			this._baseUrl = AssetManagerUtil.GetStreamingAssetsPath() + "/";
+			this._baseUrl = "";
 		}
 		this._isDownloading = true;
 		this._isCompressedBundles = true;
@@ -209,15 +210,15 @@ public class BundleScene : MonoBehaviour
 		AssetManager.UseBundles = true;
 		if (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor)
 		{
-			this._baseUrl = AssetManagerUtil.GetStreamingAssetsPath() + "/";
+			this._baseUrl = "";
 		}
 		else if (Application.platform == RuntimePlatform.IPhonePlayer)
 		{
-			this._baseUrl = AssetManagerUtil.GetStreamingAssetsPath() + "/";
+			this._baseUrl = "";
 		}
 		else if (Application.platform == RuntimePlatform.Android)
 		{
-			this._baseUrl = AssetManagerUtil.GetStreamingAssetsPath() + "/";
+			this._baseUrl = "";
 		}
 		this._isDownloading = true;
 		this._isCompressedBundles = false;
@@ -260,17 +261,20 @@ public class BundleScene : MonoBehaviour
 	public IEnumerator DownloadAssetBundles()
 	{
 		Screen.sleepTimeout = -1;
-		Int32 curItem = 0;
-		Int32 numItem = AssetManager.DictAssetBundleRefs.Count;
-		foreach (KeyValuePair<String, AssetManager.AssetBundleRef> entry in AssetManager.DictAssetBundleRefs)
+		foreach (AssetManager.AssetFolder modfold in AssetManager.Folder)
 		{
-			AssetManager.AssetBundleRef abRef = entry.Value;
-			if (abRef.assetBundle != (UnityEngine.Object)null)
+			Int32 curItem = 0;
+			Int32 numItem = modfold.DictAssetBundleRefs.Count;
+			foreach (KeyValuePair<String, AssetManager.AssetBundleRef> entry in modfold.DictAssetBundleRefs)
 			{
-				break;
+				AssetManager.AssetBundleRef abRef = entry.Value;
+				if (abRef.assetBundle != (UnityEngine.Object)null)
+				{
+					break;
+				}
+				yield return base.StartCoroutine(this.DownloadAssetBundle(abRef, curItem, numItem));
+				curItem++;
 			}
-			yield return base.StartCoroutine(this.DownloadAssetBundle(abRef, curItem, numItem));
-			curItem++;
 		}
 		this._SetStatusText("Load Completed");
 		ExpansionVerifier.printLog("BundleScene : Load Completed");
@@ -286,17 +290,14 @@ public class BundleScene : MonoBehaviour
 		{
 			yield return null;
 		}
-		this._AddLogOutput("Downloading : " + abRef.url);
+		this._AddLogOutput("Downloading : " + abRef.fullUrl);
 		String fullUrl = String.Concat(new String[]
 		{
 			this._baseUrl,
-			AssetManagerUtil.GetPlatformPrefix(Application.platform),
-			AssetManagerUtil.GetCompressionPrefix(this._isCompressedBundles),
-			abRef.url,
-			AssetManagerUtil.GetBundleExtension()
+			abRef.fullUrl
 		});
 		this._AddLogOutput("    At : " + fullUrl);
-		ExpansionVerifier.printLog("BundleScene : Downloading " + abRef.url + " AT " + fullUrl);
+		ExpansionVerifier.printLog("BundleScene : Downloading " + abRef.fullUrl + " AT " + fullUrl);
 		if (!this._isCompressedBundles && fullUrl.IndexOf("http://") == -1)
 		{
 			this._AddLogOutput("Loading Uncompressed Bundle.");

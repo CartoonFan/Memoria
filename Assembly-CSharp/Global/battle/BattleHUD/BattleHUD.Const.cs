@@ -38,10 +38,11 @@ public partial class BattleHUD : UIScene
     private static readonly String ATENormal = "battle_bar_atb";
     private static readonly String ATEGray = "battle_bar_slow";
     private static readonly String ATEOrange = "battle_bar_haste";
-    private static readonly Single DefaultPartyPanelPosY = -350f;
-    private static readonly Single PartyItemHeight = 82f;
-    private static readonly Dictionary<BattleStatus, String> DebuffIconNames;
-    private static readonly Dictionary<BattleStatus, String> BuffIconNames;
+    // TODO Check Native: #147
+    private static readonly Single DefaultPartyPanelPosY = -420f;
+    private static readonly Single PartyItemHeight = 60f;
+    public static Dictionary<BattleStatus, String> DebuffIconNames;
+    public static Dictionary<BattleStatus, String> BuffIconNames;
     private static readonly Color[] TranceTextColor;
 
     static BattleHUD()
@@ -198,35 +199,46 @@ public partial class BattleHUD : UIScene
         return false;
     }
 
-    private static BattleCommandId GetCommandFromCommandIndex(CommandMenu commandIndex, Int32 playerIndex)
+    private static BattleCommandId GetCommandFromCommandIndex(ref CommandMenu commandIndex, Int32 playerIndex)
     {
         BattleUnit player = FF9StateSystem.Battle.FF9Battle.GetUnit(playerIndex);
         CharacterPresetId presetId = FF9StateSystem.Common.FF9.party.GetCharacter(player.Position).PresetId;
+        BattleCommandId result = BattleCommandId.None;
         switch (commandIndex)
         {
             case CommandMenu.Attack:
-                return BattleCommandId.Attack;
+                result = BattleCommandId.Attack;
+                break;
             case CommandMenu.Defend:
-                return BattleCommandId.Defend;
+                result = BattleCommandId.Defend;
+                break;
             case CommandMenu.Ability1:
             {
                 CharacterCommandSet commandSet = CharacterCommands.CommandSets[presetId];
                 Boolean underTrance = player.IsUnderStatus(BattleStatus.Trance);
-                return commandSet.Get(underTrance, 0);
+                result = commandSet.Get(underTrance, 0);
+                break;
             }
             case CommandMenu.Ability2:
             {
                 CharacterCommandSet commandSet = CharacterCommands.CommandSets[presetId];
                 Boolean underTrance = player.IsUnderStatus(BattleStatus.Trance);
-                return commandSet.Get(underTrance, 1);
+                result = commandSet.Get(underTrance, 1);
+                break;
             }
             case CommandMenu.Item:
-                return BattleCommandId.Item;
+                result = BattleCommandId.Item;
+                break;
             case CommandMenu.Change:
-                return BattleCommandId.Change;
-            default:
-                return BattleCommandId.None;
+                result = BattleCommandId.Change;
+                break;
         }
+        if (player.Data.is_monster_transform && result == player.Data.monster_transform.base_command)
+        {
+            result = player.Data.monster_transform.new_command;
+            commandIndex = CommandMenu.Ability1;
+        }
+        return result;
     }
 
     private static Int32 GetFirstAlivePlayerIndex()
@@ -246,7 +258,7 @@ public partial class BattleHUD : UIScene
 
     private static Int32 GetAlivePlayerIndexForHealingAttack()
     {
-        Int32 minHp = Int32.MaxValue;
+        UInt32 minHp = Int32.MaxValue;
         Int32 minIndex = -1;
 
         Int32 index = -1;
@@ -315,7 +327,7 @@ public partial class BattleHUD : UIScene
     {
         try
         {
-            String inputPath = DataResources.Characters.CommandTitlesFile;
+            String inputPath = DataResources.Characters.Directory + DataResources.Characters.CommandTitlesFile;
             if (!File.Exists(inputPath))
                 throw new FileNotFoundException($"[BattleHUD] Cannot load character command titles because a file does not exist: [{inputPath}].", inputPath);
 
@@ -323,7 +335,18 @@ public partial class BattleHUD : UIScene
             if (maps.Length < 192)
                 throw new NotSupportedException($"You must set titles for 192 battle commands, but there {maps.Length}.");
 
-            return EntryCollection.CreateWithDefaultElement(maps, g => g.Id);
+            EntryCollection<IdMap> result = EntryCollection.CreateWithDefaultElement(maps, g => g.Id);
+            for (Int32 i = Configuration.Mod.FolderNames.Length - 1; i >= 0; i--)
+            {
+                inputPath = DataResources.Characters.ModDirectory(Configuration.Mod.FolderNames[i]) + DataResources.Characters.CommandTitlesFile;
+                if (File.Exists(inputPath))
+                {
+                    maps = CsvReader.Read<IdMap>(inputPath);
+                    foreach (IdMap it in maps)
+                        result[it.Id] = it;
+                }
+            }
+            return result;
         }
         catch (Exception ex)
         {

@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Common;
+using Assets.Scripts.Common;
 using Assets.SiliconSocial;
 using System;
 using System.Collections;
@@ -257,6 +257,8 @@ public class TitleUI : UIScene
     private Single clickedTimer = -1f;
 
     private Boolean isPaused;
+    
+    public string GClunguage;
 
     public bool IsSplashTextActive
     {
@@ -416,7 +418,7 @@ public class TitleUI : UIScene
         base.Show(sceneVoidDelegate);
         if (this.SplashScreenEnabled)
         {
-            SoundLib.StopAllSounds();
+            SoundLib.StopAllSounds(true);
             SoundLib.ClearSuspendedSounds();
             FF9StateSystem.ReInitStateSystem();
             this.CheckAutoSaveSlot(DataSerializerErrorCode.Success, false);
@@ -930,7 +932,7 @@ public class TitleUI : UIScene
             ButtonGroupState.SetActiveGroupEnable(true);
             Loading = true;
             MBG.Instance.Stop();
-            SoundLib.StopAllSounds();
+            SoundLib.StopAllSounds(true);
             this.MovieForeGround.GetComponent<HonoFading>().FadeOut(delegate
             {
                 Loading = false;
@@ -1521,6 +1523,7 @@ public class TitleUI : UIScene
     private void Start()
     {
         SiliconStudio.Social.InitializeSocialPlatform();
+        PersistenSingleton<UIManager>.Instance.WorldHUDScene.EnableContinentTitle(false);
     }
 
     private void Awake()
@@ -1561,15 +1564,16 @@ public class TitleUI : UIScene
             this.MenuBlackjackButton.SetActive(false);
             this.MenuStaffPCButton.SetActive(true);
             this.MenuBlackjackPCButton.SetActive(true);
-            UIEventListener expr_2B8 = UIEventListener.Get(this.MenuStaffPCButton);
-            expr_2B8.onClick = (UIEventListener.VoidDelegate)Delegate.Combine(expr_2B8.onClick, new UIEventListener.VoidDelegate(this.onClick));
-            UIEventListener expr_2E5 = UIEventListener.Get(this.MenuBlackjackPCButton);
-            expr_2E5.onClick = (UIEventListener.VoidDelegate)Delegate.Combine(expr_2E5.onClick, new UIEventListener.VoidDelegate(this.onClick));
-            if (FF9StateSystem.PCEStorePlatform)
-            {
-                this.MenuStaffPCButton.transform.position = this.SquareEnixButton.transform.position;
-                this.SquareEnixButton.SetActive(false);
-            }
+            
+            UIEventListener staffEvents = UIEventListener.Get(this.MenuStaffPCButton);
+            staffEvents.Click += onClick;
+            
+            UIEventListener blackjackEvents = UIEventListener.Get(this.MenuBlackjackPCButton);
+            blackjackEvents.Click += onClick;
+            
+            this.SquareEnixButton.SetActive(true);
+            UIEventListener squareEnixEvents = UIEventListener.Get(this.SquareEnixButton);
+            squareEnixEvents.Click += onClick;
         }
         else
         {
@@ -1690,9 +1694,9 @@ public class TitleUI : UIScene
                 break;
         }
 
-        TextAsset textAsset = AssetManager.Load<TextAsset>("EmbeddedAsset/Manifest/Text/License_" + str + ".txt", false);
+        String textAsset = AssetManager.LoadString("EmbeddedAsset/Manifest/Text/License_" + str + ".txt", out _, false);
         if (textAsset != null)
-            this.UpdateLicenseText(textAsset.text);
+            this.UpdateLicenseText(textAsset);
 
         UICenterOnChild expr_810 = this.MovieCenterOnChild;
         expr_810.onCenter = (UICenterOnChild.OnCenterCallback)Delegate.Combine(expr_810.onCenter, new UICenterOnChild.OnCenterCallback(this.OnCenterMoviePage));
@@ -1715,6 +1719,17 @@ public class TitleUI : UIScene
         }
         this.slashScreen = new SlashScreen(null, this.SpashText, this.SlideShowObject, this.SlideShowFadingObject, this.TitleImageTextObject0, this.TitleImageTextObject1, this.TitleImageTextJpObject0, this.TitleImageTextJpObject1);
         UICamera.onNavigate = (UICamera.KeyCodeDelegate)Delegate.Combine(UICamera.onNavigate, new UICamera.KeyCodeDelegate(this.OnKeyNavigate));
+
+        // Apply DictionaryPatch.txt; might move the patcher somewhere else; might use the default folder (AssetManager.Folder.Length-1) as well
+        // Reverse order for first having priority
+        for (Int32 i = AssetManager.Folder.Length - 2; i >= 0; --i)
+        {
+            if (System.IO.File.Exists(AssetManager.Folder[i].FolderPath + AssetManager.MemoriaDictionaryPatcherPath))
+            {
+                String[] patch = System.IO.File.ReadAllLines(AssetManager.Folder[i].FolderPath + AssetManager.MemoriaDictionaryPatcherPath);
+                AssetManager.PatchDictionaries(patch);
+            }
+        }
     }
 
     private class SlideShow
@@ -1821,18 +1836,19 @@ public class TitleUI : UIScene
 
         public Sprite GetPicture(Type kind, Int32 idx)
         {
+			String[] spriteInfo;
             if (kind == Type.Sequence1)
             {
                 switch (idx)
                 {
                     case 0:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_00");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_00", out spriteInfo, false);
                     case 1:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_01");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_01", out spriteInfo, false);
                     case 2:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_02");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_02", out spriteInfo, false);
                     case 3:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_03");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_03", out spriteInfo, false);
                 }
             }
             else if (kind == Type.Sequence2)
@@ -1840,13 +1856,13 @@ public class TitleUI : UIScene
                 switch (idx)
                 {
                     case 0:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_04");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_04", out spriteInfo, false);
                     case 1:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_05");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_05", out spriteInfo, false);
                     case 2:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_06");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_06", out spriteInfo, false);
                     case 3:
-                        return Resources.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_07");
+                        return AssetManager.Load<Sprite>("EmbeddedAsset/UI/Sprites/title_image_07", out spriteInfo, false);
                 }
             }
             else if (kind == Type.SplashScreen)
@@ -1890,7 +1906,8 @@ public class TitleUI : UIScene
 
         private Sprite LoadSprite(String relativePath)
         {
-            Sprite result = Resources.Load<Sprite>("EmbeddedAsset/" + relativePath);
+			String[] spriteInfo;
+            Sprite result = AssetManager.Load<Sprite>("EmbeddedAsset/" + relativePath, out spriteInfo, false);
 
             try
             {
@@ -2162,9 +2179,9 @@ public class TitleUI : UIScene
             //{
             //    text = "US";
             //}
-            TextAsset textAsset = AssetManager.Load<TextAsset>("EmbeddedAsset/Text/" + text + "/Title/warning", false);
+			String[] warningInfo;
+            this.spashText.text = AssetManager.LoadString("EmbeddedAsset/Text/" + text + "/Title/warning", out warningInfo, false);
             this.spashText.alignment = NGUIText.Alignment.Left;
-            this.spashText.text = textAsset.text;
             this.spashText.gameObject.SetActive(true);
             SceneVoidDelegate postIdleScreenFadeOut = delegate
             {

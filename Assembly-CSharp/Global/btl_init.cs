@@ -80,7 +80,7 @@ public class btl_init
 			{
 				btl_DATA2.weapon_geo = null;
 			}
-			btl_DATA2.sa = btl_init.enemy_dummy_sa;
+			btl_DATA2.sa = btl_init.enemy_dummy_sa; // Might want to use "= new UInt32[2]" for letting enemies use SA... doesn't seem to be useful for now though
 
 		    FF9BattleDBHeightAndRadius.TryFindHeightAndRadius(geoID, ref btl_DATA2.height, ref btl_DATA2.radius);
             
@@ -159,7 +159,7 @@ public class btl_init
 		pBtl.stat.permanent = pParm.Status[1];
 		pBtl.stat.cur = pParm.Status[2];
 		pBtl.cur.hp = pParm.MaxHP;
-		pBtl.cur.mp = (Int16)pParm.MaxMP;
+		pBtl.cur.mp = pParm.MaxMP;
 		pBtl.defence.PhisicalDefence = pParm.P_DP;
 		pBtl.defence.PhisicalEvade = pParm.P_AV;
 		pBtl.defence.MagicalDefence = pParm.M_DP;
@@ -175,28 +175,31 @@ public class btl_init
 		pBtl.mesh_current = pParm.Mesh[0];
 		pBtl.mesh_banish = pParm.Mesh[1];
 		pBtl.tar_bone = pParm.Bone[3];
+		// New field "out_of_reach"
+		pBtl.out_of_reach = pParm.OutOfReach < 0 ? FF9StateSystem.Battle.FF9Battle.btl_scene.Info.NoNeighboring != 0 : pParm.OutOfReach != 0;
 		ENEMY enemy = FF9StateSystem.Battle.FF9Battle.enemy[pBtl.bi.slot_no];
 		for (Int32 i = 0; i < pParm.StealItems.Length; i++)
 		{
 			enemy.steal_item[i] = pParm.StealItems[i];
 		}
+		enemy.steal_unsuccessful_counter = 0; // New field used for counting unsuccessful steals and force a successful steal when it becomes high enough
 		enemy.info.die_atk = (Byte)(((pParm.Flags & 1) == 0) ? 0 : 1);
 		enemy.info.die_dmg = (Byte)(((pParm.Flags & 2) == 0) ? 0 : 1);
+		enemy.info.flags = pParm.Flags;
 		btl_util.SetShadow(pBtl, pParm.ShadowX, pParm.ShadowZ);
 		pBtl.shadow_bone[0] = pParm.ShadowBone;
 		pBtl.shadow_bone[1] = pParm.ShadowBone2;
+		pBtl.geo_scale_x = pBtl.geo_scale_y = pBtl.geo_scale_z = 4096;
 	}
 
 	public static void PutMonster(SB2_PUT pPut, BTL_DATA pBtl, BTL_SCENE pScene, Int16 pNo)
 	{
-		Int16[] array = new Int16[3];
-		array[1] = 180;
-		Int16[] array2 = array;
+		Int16 startTypeAngle = (Int16)(pScene.Info.StartType == battle_start_type_tags.BTL_START_FIRST_ATTACK ? 180 : 0);
 		ENEMY enemy = FF9StateSystem.Battle.FF9Battle.enemy[pBtl.bi.slot_no];
 		enemy.et = FF9StateSystem.Battle.FF9Battle.enemy_type[pPut.TypeNo];
 		pBtl.bi.target = (Byte)(((pPut.Flags & 1) == 0) ? 0 : 1);
 		pBtl.bi.row = 2;
-		pBtl.max = FF9StateSystem.Battle.FF9Battle.enemy_type[pPut.TypeNo].max;
+		CopyPoints(pBtl.max, FF9StateSystem.Battle.FF9Battle.enemy_type[pPut.TypeNo].max);
 		pBtl.cur.hp = pBtl.max.hp;
 		pBtl.cur.mp = pBtl.max.mp;
 		enemy.info.multiple = (Byte)(((pPut.Flags & 2) == 0) ? 0 : 1);
@@ -220,7 +223,9 @@ public class btl_init
 			pBtl.original_pos[2] = num;
 			pBtl.base_pos[2] = num;
 			pBtl.pos[index3] = num;
-			pBtl.rot = (pBtl.evt.rotBattle = Quaternion.Euler(new Vector3(0f, pPut.Rot + array2[pScene.Info.StartType] & 4095, 180f)));
+			pBtl.evt.rotBattle = Quaternion.Euler(new Vector3(0f, (Single)(pPut.Rot & 4095), 180f));
+			pBtl.rot = Quaternion.Euler(new Vector3(0f, (Single)(pPut.Rot + startTypeAngle & 4095), 180f));
+			//pBtl.rot = (pBtl.evt.rotBattle = Quaternion.Euler(new Vector3(0f, pPut.Rot + 180 & 4095, 180f)));
 		}
 		else
 		{
@@ -243,7 +248,7 @@ public class btl_init
 		pType.level = pParm.Level;
 		pType.blue_magic_no = pParm.Blue;
 		pType.max.hp = pParm.MaxHP;
-		pType.max.mp = (Int16)pParm.MaxMP;
+		pType.max.mp = pParm.MaxMP;
 		pType.bonus.gil = pParm.WinGil;
 		pType.bonus.exp = pParm.WinExp;
 		pType.bonus.card = pParm.Card;
@@ -317,7 +322,7 @@ public class btl_init
 		}
 		btlsys.btl_load_status = (Byte)(btlsys.btl_load_status | 16);
 		btl_init.SetupBattlePlayer();
-		if (btlsys.btl_scene.Info.StartType == 0)
+		if (btlsys.btl_scene.Info.StartType == battle_start_type_tags.BTL_START_BACK_ATTACK)
 		{
 			for (BTL_DATA btl_DATA = btlsys.btl_list.next; btl_DATA != null; btl_DATA = btl_DATA.next)
 			{
@@ -327,7 +332,7 @@ public class btl_init
 				}
 			}
 		}
-		else if (btlsys.btl_scene.Info.StartType == 1)
+		else if (btlsys.btl_scene.Info.StartType == battle_start_type_tags.BTL_START_FIRST_ATTACK)
 		{
 			for (BTL_DATA btl_DATA = btlsys.btl_list.next; btl_DATA != null; btl_DATA = btl_DATA.next)
 			{
@@ -355,7 +360,7 @@ public class btl_init
 		Int16 num3 = 632;
 		Int16 num4 = -1560;
 		Int16 num5 = (Int16)((num - 1) * num3 / 2);
-		Int16 num6 = (Int16)((btl_scene.Info.StartType != 0) ? 180 : 0);
+		Int16 num6 = (Int16)((btl_scene.Info.StartType != battle_start_type_tags.BTL_START_BACK_ATTACK) ? 180 : 0);
 		num2 = 0;
 		BTL_DATA next = FF9StateSystem.Battle.FF9Battle.btl_list.next;
 		while (num2 < num)
@@ -365,7 +370,7 @@ public class btl_init
 				break;
 			}
 			next.bi.row = FF9StateSystem.Common.FF9.player[next.bi.slot_no].info.row;
-			if (btl_scene.Info.StartType == 0)
+			if (btl_scene.Info.StartType == battle_start_type_tags.BTL_START_BACK_ATTACK)
 			{
 				BTL_INFO bi = next.bi;
 				bi.row = (Byte)(bi.row ^ 1);
@@ -373,28 +378,34 @@ public class btl_init
 			BTL_DATA btl_DATA = next;
 			Int32 index = 0;
 			Single num7 = num5;
+			next.original_pos[0] = num7;
 			next.evt.posBattle[0] = num7;
 			next.base_pos[0] = num7;
 			btl_DATA.pos[index] = num7;
 			BTL_DATA btl_DATA2 = next;
 			Int32 index2 = 1;
 			num7 = (!btl_stat.CheckStatus(next, BattleStatus.Float)) ? 0 : -200;
+			next.original_pos[1] = 0;
 			next.evt.posBattle[1] = num7;
 			next.base_pos[1] = num7;
 			btl_DATA2.pos[index2] = num7;
 			BTL_DATA btl_DATA3 = next;
 			Int32 index3 = 2;
 			num7 = num4 + (Int16)((next.bi.row == 0) ? -400 : 0);
+			next.original_pos[2] = num4;
 			next.evt.posBattle[2] = num7;
 			next.base_pos[2] = num7;
 			btl_DATA3.pos[index3] = num7;
-			next.rot = (next.evt.rotBattle = Quaternion.Euler(new Vector3(0f, num6, 180f)));
+			next.evt.rotBattle = Quaternion.Euler(new Vector3(0f, 180f, 180f));
+			next.rot = Quaternion.Euler(new Vector3(0f, (Single)num6, 180f));
+//			next.rot = (next.evt.rotBattle = Quaternion.Euler(new Vector3(0f, num6, 180f)));
 			next.gameObject.transform.localPosition = next.pos;
 			next.gameObject.transform.localRotation = next.rot;
 			Int16 serial_no = FF9StateSystem.Common.FF9.player[next.bi.slot_no].info.serial_no;
 			next.shadow_bone[0] = btl_init.ShadowDataPC[serial_no][0];
 			next.shadow_bone[1] = btl_init.ShadowDataPC[serial_no][1];
 			btl_util.SetShadow(next, btl_init.ShadowDataPC[serial_no][2], btl_init.ShadowDataPC[serial_no][3]);
+			next.geo_scale_x = next.geo_scale_y = next.geo_scale_z = 4096;
 			GameObject gameObject = FF9StateSystem.Battle.FF9Battle.map.shadowArray[next.bi.slot_no];
 			Vector3 localPosition = gameObject.transform.localPosition;
 			localPosition.z = btl_init.ShadowDataPC[serial_no][4];
@@ -432,7 +443,7 @@ public class btl_init
 		btl.elem.mgc = p.elem.mgc;
 		btl.elem.wpr = p.elem.wpr;
 		btl.level = p.level;
-		btl.max = p.max;
+		btl_init.CopyPoints(btl.max, p.max);
 		btl_init.CopyPoints(btl.cur, p.cur);
 		Byte serial_no = p.info.serial_no;
 		FF9Char ff9Char = new FF9Char();
@@ -444,11 +455,11 @@ public class btl_init
 		btl_stat.InitCountDownStatus(btl);
 		btl.max.at = (Int16)((60 - btl.elem.dex) * 40 << 2);
 		btl_para.InitATB(btl);
-		if (FF9StateSystem.Battle.FF9Battle.btl_scene.Info.StartType == 0)
+		if (FF9StateSystem.Battle.FF9Battle.btl_scene.Info.StartType == battle_start_type_tags.BTL_START_BACK_ATTACK)
 		{
 			btl.cur.at = 0;
 		}
-		else if (FF9StateSystem.Battle.FF9Battle.btl_scene.Info.StartType == 1)
+		else if (FF9StateSystem.Battle.FF9Battle.btl_scene.Info.StartType == battle_start_type_tags.BTL_START_FIRST_ATTACK)
 		{
 			btl.cur.at = (Int16)(btl.max.at - 1);
 		}
@@ -476,6 +487,12 @@ public class btl_init
 			btl_stat.AlterStatus(btl, BattleStatus.Petrify);
 		}
 		btl_abil.CheckStatusAbility(new BattleUnit(btl));
+		BattleStatus permanent_stat = btl.stat.permanent;
+		BattleStatus current_stat = btl.stat.cur;
+		btl.stat.permanent = 0;
+		btl.stat.cur = 0;
+		btl_stat.MakeStatusesPermanent(btl, permanent_stat);
+		btl_stat.AlterStatuses(btl, current_stat);
 		btl.base_pos = btl.evt.posBattle;
 		Int16 geoID = btl.dms_geo_id;
 		btl.height = 0;
@@ -528,6 +545,12 @@ public class btl_init
 				btl_DATA.currentAnimationName = btl_DATA.mot[btl_DATA.bi.def_idle];
 				btl_DATA.evt.animFrame = (Byte)(Comn.random8() % GeoAnim.geoAnimGetNumFrames(btl_DATA));
 			}
+			BattleStatus permanent_stat = btl_DATA.stat.permanent;
+			BattleStatus current_stat = btl_DATA.stat.cur;
+			btl_DATA.stat.permanent = 0;
+			btl_DATA.stat.cur = 0;
+			btl_stat.MakeStatusesPermanent(btl_DATA, permanent_stat);
+			btl_stat.AlterStatuses(btl_DATA, current_stat);
 		}
 	}
 
@@ -577,6 +600,15 @@ public class btl_init
 		GeoTexAnim.geoTexAnimPlay(btl.texanimptr, 2);
 		btl_util.GeoSetColor2Source(btl.gameObject, 0, 0, 0);
 		btl.mesh_current = 0;
+		// Out of reach: enemies inside battles flagged with "NoNeighboring" are all set to out of reach but they can also be placed individually using SV_FunctionEnemy[110] in battle scripts or setting the "OutOfReach" flag in the battle's ".memnfo" file
+		// False by default for player character, initialized in "btl_init.SetMonsterData" for enemies
+		btl.out_of_reach = false;
+		for (int i = 0; i < btl.stat_modifier.Length; i++)
+			btl.stat_modifier[i] = false;
+		btl.summon_count = 0;
+		btl.critical_rate_deal_bonus = 0;
+		btl.critical_rate_receive_bonus = 0;
+		btl.is_monster_transform = false;
 	}
 
     public static void SetBattleModel(BTL_DATA btl)
@@ -667,7 +699,7 @@ public class btl_init
 
 	private static readonly UInt32[] enemy_dummy_sa = new UInt32[2];
 
-	private static Byte[][] ShadowDataPC = new Byte[][]
+	public static Byte[][] ShadowDataPC = new Byte[][]
 	{
 		new Byte[]
 		{

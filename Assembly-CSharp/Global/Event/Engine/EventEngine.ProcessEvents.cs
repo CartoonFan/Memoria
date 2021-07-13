@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FF9;
 using Memoria;
 using UnityEngine;
+using Assets.Scripts.Common;
 // ReSharper disable ClassNeverInstantiated.Global
 
 public partial class EventEngine
@@ -94,14 +95,26 @@ public partial class EventEngine
         }
         if (isBattle)
             this.SetupBattleState();
+        
         this._posUsed = false;
-        Int32 num1 = this.eBin.ProcessCode(this._context.activeObj);
+        
+        // TODO Check Native: #147
+        Int32 num1 = 0;
+        bool canProcessCode = true;
+
+        if (_ff9.fldMapNo == 257)
+            canProcessCode = (!Singleton<DialogManager>.Instance.Activate || Singleton<DialogManager>.Instance.CompletlyVisible);
+        
+        if (canProcessCode)
+            num1 = this.eBin.ProcessCode(this._context.activeObj);
+        
         EventHUD.CheckUIMiniGameForMobile();
         if (num1 == 6)
             num1 = 0;
         else
-            this.gStopObj = (ObjList)null;
-        this._aimObj = (PosObj)null;
+            this.gStopObj = null;
+        
+        this._aimObj = null;
         this._eyeObj = (PosObj)null;
         for (ObjList objList = this._context.activeObj; objList != null; objList = objList.next)
             this.SetRenderer(objList.obj, isBattle);
@@ -261,6 +274,173 @@ public partial class EventEngine
         EMinigame.AllTreasureAchievement();
         EMinigame.AllSandyBeachAchievement();
         EMinigame.DigUpKupoAchievement();
+        // In-game free camera mode: navigation
+        if (this.sExternalFieldMode)
+        {
+            bool allow_camera_move = true;
+            if (this.sExternalFieldFade >= 0)
+            {
+                if (this.sExternalFieldFade < 255 && this.sExternalFieldFade + 25 >= 255)
+                {
+                    this.sExternalFieldFade = 255;
+                    if (this.sExternalFieldChangeField >= 0)
+                    {
+                        this.sExternalFieldNum = this.sExternalFieldChangeField;
+                        this.fieldmap.ChangeFieldMap(EventEngineUtils.eventIDToFBGID[this.sExternalFieldList[this.sExternalFieldNum]]);
+                        if (this.sExternalFieldChangeCamera < 0)
+                            this.fieldmap.SetCurrentCameraIndex(this.fieldmap.scene.cameraList.Count - 1);
+                        else
+                            this.fieldmap.SetCurrentCameraIndex(this.sExternalFieldChangeCamera);
+                        FF9StateSystem.Common.FF9.fldMapNo = this.sExternalFieldList[this.sExternalFieldNum];
+                    }
+                    else if (this.sExternalFieldChangeCamera >= 0)
+                    {
+                        this.fieldmap.SetCurrentCameraIndex(this.sExternalFieldChangeCamera);
+                    }
+                    else
+                    {
+                        this.fieldmap.ChangeFieldMap(this.sOriginalFieldName);
+                        this.fieldmap.ActivateCamera();
+                        foreach (GameObject field_object in this.sOriginalFieldGameObjects)
+                        {
+                            field_object.transform.parent = this.fieldmap.transform;
+                            field_object.SetActive(true);
+                        }
+                        this.fieldmap.EBG_scene2DScrollRelease(1, 0);
+                        FF9StateSystem.Common.FF9.fldMapNo = this.sOriginalFieldNo;
+                        this.sExternalFieldList.Clear();
+                        this.sOriginalFieldGameObjects.Clear();
+                    }
+                    BGCAM_DEF new_camera_view = this.fieldmap.scene.cameraList[this.fieldmap.camIdx];
+                    this.fieldmap.EBG_scene2DScroll((short)((new_camera_view.vrpMinX + new_camera_view.vrpMaxX) / 2), (short)((new_camera_view.vrpMinY + new_camera_view.vrpMaxY) / 2), 1, 0);
+                }
+                else if (this.sExternalFieldFade < 510 && this.sExternalFieldFade + 25 >= 510)
+                {
+                    this.sExternalFieldFade = -1;
+                    Resources.UnloadUnusedAssets();
+                    if (FF9StateSystem.Common.FF9.fldMapNo == this.sOriginalFieldNo)
+                        this.sExternalFieldMode = false;
+                }
+                else
+                    this.sExternalFieldFade += 25;
+                if (this.sExternalFieldFade < 0)
+                    SceneDirector.FadeEventSetColor(FadeMode.Add, Color.black);
+                else if (this.sExternalFieldFade < 256)
+                    SceneDirector.FadeEventSetColor(FadeMode.Add, new Color((float)this.sExternalFieldFade / 255f, (float)this.sExternalFieldFade / 255f, (float)this.sExternalFieldFade / 255f));
+                else
+                    SceneDirector.FadeEventSetColor(FadeMode.Add, new Color((float)(510 - this.sExternalFieldFade) / 255f, (float)(510 - this.sExternalFieldFade) / 255f, (float)(510 - this.sExternalFieldFade) / 255f));
+            }
+            else
+            {
+                if (UIManager.Input.GetKey(Control.RightBumper))
+                {
+                    if (this.fieldmap.camIdx + 1 < this.fieldmap.scene.cameraList.Count
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 61
+                        && (this.sExternalFieldList[this.sExternalFieldNum] != 65 || this.fieldmap.camIdx < 2)
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 803
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 809
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 810
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 812
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 2553
+                        && this.sExternalFieldList[this.sExternalFieldNum] != 2756)
+                    {
+                        this.sExternalFieldChangeField = -1;
+                        this.sExternalFieldChangeCamera = this.fieldmap.camIdx + 1;
+                        this.sExternalFieldFade = 0;
+                    }
+                    else if (this.sExternalFieldNum + 1 < this.sExternalFieldList.Count)
+                    {
+                        this.sExternalFieldChangeField = this.sExternalFieldNum + 1;
+                        if (this.sExternalFieldList[this.sExternalFieldChangeField] == 51)
+                            this.sExternalFieldChangeCamera = -1;
+                        else
+                            this.sExternalFieldChangeCamera = 0;
+                        this.sExternalFieldFade = 0;
+                    }
+                    else
+                    {
+                        this.sExternalFieldChangeField = -1;
+                        this.sExternalFieldChangeCamera = -1;
+                        this.sExternalFieldFade = 0;
+                    }
+                    allow_camera_move = false;
+                }
+                else if (UIManager.Input.GetKey(Control.LeftBumper))
+                {
+                    if (this.fieldmap.camIdx > 0 && this.sExternalFieldList[this.sExternalFieldNum] != 51)
+                    {
+                        this.sExternalFieldChangeField = -1;
+                        this.sExternalFieldChangeCamera = this.fieldmap.camIdx - 1;
+                        this.sExternalFieldFade = 0;
+                        allow_camera_move = false;
+                    }
+                    else if (this.sExternalFieldNum > 0)
+                    {
+                        this.sExternalFieldChangeField = this.sExternalFieldNum - 1;
+                        if (this.sExternalFieldList[this.sExternalFieldChangeField] == 61
+                            || this.sExternalFieldList[this.sExternalFieldChangeField] == 803
+                            || this.sExternalFieldList[this.sExternalFieldChangeField] == 809
+                            || this.sExternalFieldList[this.sExternalFieldChangeField] == 810
+                            || this.sExternalFieldList[this.sExternalFieldChangeField] == 812
+                            || this.sExternalFieldList[this.sExternalFieldChangeField] == 2553
+                            || this.sExternalFieldList[this.sExternalFieldChangeField] == 2756)
+                            this.sExternalFieldChangeCamera = 0;
+                        else if (this.sExternalFieldList[this.sExternalFieldChangeField] == 65)
+                            this.sExternalFieldChangeCamera = 2;
+                        else
+                            this.sExternalFieldChangeCamera = -1;
+                        this.sExternalFieldFade = 0;
+                        allow_camera_move = false;
+                    }
+                }
+                else if (UIManager.Input.GetKey(Control.Select))
+                {
+                    this.sExternalFieldChangeField = -1;
+                    this.sExternalFieldChangeCamera = -1;
+                    this.sExternalFieldFade = 0;
+                    allow_camera_move = false;
+                }
+                if (allow_camera_move)
+                {
+                    Vector2 new_camera_position = this.fieldmap.curVRP;
+                    new_camera_position[0] += 160f + this.fieldmap.scene.cameraList[this.fieldmap.camIdx].centerOffset[0];
+                    new_camera_position[1] += 112f - this.fieldmap.scene.cameraList[this.fieldmap.camIdx].centerOffset[1];
+                    Vector2 vector = Vector2.zero;
+                    if (FF9StateSystem.MobilePlatform)
+                    {
+                        if (VirtualAnalog.HasInput())
+                            vector = VirtualAnalog.GetAnalogValue();
+                        else
+                            vector = PersistenSingleton<HonoInputManager>.Instance.GetAxis();
+                    }
+                    else
+                    {
+                        vector = PersistenSingleton<HonoInputManager>.Instance.GetAxis();
+                    }
+                    if (UIManager.Input.GetKey(Control.Up))
+                        vector.y = 1f;
+                    else if (UIManager.Input.GetKey(Control.Down))
+                        vector.y = -1f;
+                    if (UIManager.Input.GetKey(Control.Left))
+                        vector.x = -1f;
+                    else if (UIManager.Input.GetKey(Control.Right))
+                        vector.x = 1f;
+                    if (Mathf.Abs(vector.y) > 0.1f)
+                        new_camera_position.y -= vector.y * 5f;
+                    if (Mathf.Abs(vector.x) > 0.1f)
+                        new_camera_position.x += vector.x * 5f;
+                    if (new_camera_position.x < (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMinX)
+                        new_camera_position.x = (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMinX;
+                    else if (new_camera_position.x > (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMaxX)
+                        new_camera_position.x = (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMaxX;
+                    if (new_camera_position.y < (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMinY)
+                        new_camera_position.y = (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMinY;
+                    else if (new_camera_position.y > (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMaxY)
+                        new_camera_position.y = (float)this.fieldmap.scene.cameraList[this.fieldmap.camIdx].vrpMaxY;
+                    this.fieldmap.EBG_scene2DScroll((short)new_camera_position[0], (short)new_camera_position[1], 1, 0);
+                }
+            }
+        }
         //this.printActorsInObjList(this.E.activeObj);
         return num1;
     }
@@ -297,6 +477,7 @@ public partial class EventEngine
                 this.SetBattleScene(SceneNo);
                 this._ff9.btlSubMapNo = -1;
                 FF9StateSystem.Battle.isRandomEncounter = true;
+                FF9StateSystem.Battle.isEncount = true;
             }
         }
         return SceneNo != 0;

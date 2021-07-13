@@ -256,13 +256,13 @@ public static class PSXTextureMgr
 		if (PSXTextureMgr.isBgCapture)
 		{
 			PSXTextureMgr.isBgCapture = false;
+			PSXTextureMgr.bgKey = (uint)(PSXTextureMgr.bgParam[1] >> 8 << 20 | PSXTextureMgr.bgParam[0] >> 6 << 16);
 			GameObject btlBGPtr = FF9StateSystem.Battle.FF9Battle.map.btlBGPtr;
 			MeshRenderer[] componentsInChildren = btlBGPtr.GetComponentsInChildren<MeshRenderer>();
 			for (Int32 i = 0; i < (Int32)componentsInChildren.Length; i++)
 			{
 				if (componentsInChildren[i].name == "Group_2")
 				{
-					PSXTextureMgr.bgKey = (UInt32)(PSXTextureMgr.bgParam[1] >> 8 << 20 | PSXTextureMgr.bgParam[0] >> 6 << 16);
 					RenderTexture active = RenderTexture.active;
 					RenderTexture.active = PSXTextureMgr.bgTexture;
 					GL.Viewport(new Rect(0f, 0f, 256f, 256f));
@@ -286,6 +286,11 @@ public static class PSXTextureMgr
 					return;
 				}
 			}
+			PSXTextureMgr.bgKey = (uint)(PSXTextureMgr.bgParam[1] >> 8 << 20 | PSXTextureMgr.bgParam[0] >> 6 << 16);
+			RenderTexture active2 = RenderTexture.active;
+			RenderTexture.active = PSXTextureMgr.bgTexture;
+			GL.Clear(false, true, new Color(0f, 0f, 0f, 0f));
+			RenderTexture.active = active2;
 		}
 	}
 
@@ -317,11 +322,12 @@ public static class PSXTextureMgr
 				}
 			}
 		}
-		PSXTextureMgr.eff435Tex[3] = Resources.Load<Texture2D>("SpecialEffects/geo_mon_b3_199_02");
+		String[] pngInfo;
+		PSXTextureMgr.eff435Tex[3] = AssetManager.Load<Texture2D>("SpecialEffects/geo_mon_b3_199_02", out pngInfo, false);
 		PSXTextureMgr.eff435Key[3] = SFXKey.GenerateKey(1, 0, 0, 0, 0);
-		PSXTextureMgr.eff435Tex[4] = Resources.Load<Texture2D>("SpecialEffects/geo_mon_b3_199_00");
+		PSXTextureMgr.eff435Tex[4] = AssetManager.Load<Texture2D>("SpecialEffects/geo_mon_b3_199_00", out pngInfo, false);
 		PSXTextureMgr.eff435Key[4] = SFXKey.GenerateKey(1, 1, 0, 0, 0);
-		PSXTextureMgr.eff435Tex[5] = Resources.Load<Texture2D>("SpecialEffects/geo_mon_b3_199_01");
+		PSXTextureMgr.eff435Tex[5] = AssetManager.Load<Texture2D>("SpecialEffects/geo_mon_b3_199_01", out pngInfo, false);
 		PSXTextureMgr.eff435Key[5] = SFXKey.GenerateKey(1, 2, 0, 0, 0);
 		PSXTextureMgr.eff435Tex[6] = PSXTextureMgr.eff435Tex[5];
 		PSXTextureMgr.eff435Key[6] = SFXKey.GenerateKey(1, 3, 0, 0, 0);
